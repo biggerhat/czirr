@@ -1,0 +1,36 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx shadcn-vue@latest add:*)",
+      "Bash(echo:*)",
+      "Bash(source:*)",
+      "Bash(nvm list:*)",
+      "Bash(nvm use:*)",
+      "Bash(php artisan migrate:*)",
+      "Bash(php artisan:*)",
+      "Bash(npx vite build:*)",
+      "Bash(ls:*)",
+      "Bash(xargs:*)",
+      "Bash(./vendor/bin/sail artisan migrate:status:*)",
+      "Bash(./vendor/bin/sail artisan tinker:*)",
+      "Bash(./vendor/bin/sail npm run build:*)",
+      "Bash(./vendor/bin/sail exec:*)",
+      "Bash(./vendor/bin/sail artisan:*)",
+      "Bash(test:*)",
+      "Bash(find:*)",
+      "Bash(composer require:*)",
+      "Bash(npm install:*)",
+      "Bash(php -r:*)",
+      "Bash(node -e:*)",
+      "Bash(npx vue-tsc:*)",
+      "Bash(npm run build:*)",
+      "Bash(php:*)",
+      "Bash(sail artisan:*)",
+      "Bash(file:*)",
+      "Bash(grep:*)",
+      "Bash(cat:*)",
+      "WebSearch",
+      "WebFetch(domain:vueuse.org)"
+    ]
+  }
+}
