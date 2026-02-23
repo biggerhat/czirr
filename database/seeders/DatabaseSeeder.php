@@ -3,14 +3,20 @@
 namespace Database\Seeders;
 
 use App\Enums\FamilyRole;
+use App\Enums\MealType;
 use App\Models\Bill;
 use App\Models\BudgetCategory;
+use App\Models\Chore;
+use App\Models\ChoreAssignment;
+use App\Models\Contact;
 use App\Models\Event;
 use App\Models\Expense;
 use App\Models\FamilyList;
 use App\Models\FamilyListItem;
 use App\Models\FamilyMember;
 use App\Models\Income;
+use App\Models\MealPlanEntry;
+use App\Models\Recipe;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Database\Seeder;
@@ -419,5 +425,96 @@ class DatabaseSeeder extends Seeder
             RecipeSeeder::class,
             CookbookSeeder::class,
         ]);
+
+        // --- Chores ---
+        $choreNames = ['Wash dishes', 'Take out trash', 'Vacuum living room', 'Feed the pets', 'Set the table'];
+        $chores = collect($choreNames)->map(fn ($name) => Chore::factory()->create([
+            'user_id' => $admin->id,
+            'name' => $name,
+        ]));
+
+        // Assign chores to teen and child members on specific days
+        $assignments = [
+            [$chores[0], $teenMember, 1],   // Wash dishes - Mon
+            [$chores[0], $childMember, 4],   // Wash dishes - Thu
+            [$chores[1], $teenMember, 2],    // Take out trash - Tue
+            [$chores[1], $teenMember, 5],    // Take out trash - Fri
+            [$chores[2], $childMember, 3],   // Vacuum - Wed
+            [$chores[3], $childMember, 0],   // Feed pets - Sun
+            [$chores[3], $childMember, 6],   // Feed pets - Sat
+            [$chores[4], $teenMember, 0],    // Set table - Sun
+            [$chores[4], $childMember, 3],   // Set table - Wed
+        ];
+
+        foreach ($assignments as [$chore, $member, $day]) {
+            ChoreAssignment::factory()->create([
+                'chore_id' => $chore->id,
+                'family_member_id' => $member->id,
+                'day_of_week' => $day,
+            ]);
+        }
+
+        // --- Contacts ---
+        Contact::factory()->create([
+            'user_id' => $admin->id,
+            'first_name' => 'Dr. Sarah',
+            'last_name' => 'Chen',
+            'phone' => '(555) 123-4567',
+            'email' => 'dr.chen@example.com',
+            'notes' => 'Family pediatrician',
+        ]);
+
+        Contact::factory()->withBirthday()->create([
+            'user_id' => $admin->id,
+            'first_name' => 'Mike',
+            'last_name' => 'Johnson',
+            'phone' => '(555) 987-6543',
+            'date_of_birth' => '1988-07-15',
+            'notes' => 'College friend',
+        ]);
+
+        Contact::factory()->withBirthday()->create([
+            'user_id' => $admin->id,
+            'first_name' => 'Grandma',
+            'last_name' => 'Doe',
+            'phone' => '(555) 456-7890',
+            'date_of_birth' => '1950-12-03',
+            'address_line_1' => '42 Maple Lane',
+            'city' => 'Springfield',
+            'state' => 'IL',
+            'zip' => '62701',
+        ]);
+
+        Contact::factory()->create([
+            'user_id' => $admin->id,
+            'first_name' => 'Coach',
+            'last_name' => 'Williams',
+            'phone' => '(555) 321-0987',
+            'email' => 'coach.w@example.com',
+            'notes' => 'Soccer coach for Alex & Sam',
+        ]);
+
+        // --- Meal plan entries (7 days of breakfast + dinner) ---
+        $recipes = Recipe::where('user_id', $admin->id)->take(4)->get();
+
+        for ($d = 0; $d < 7; $d++) {
+            $date = $today->copy()->startOfWeek()->addDays($d)->format('Y-m-d');
+
+            // Breakfast
+            MealPlanEntry::factory()->breakfast()->create([
+                'user_id' => $admin->id,
+                'date' => $date,
+                'name' => fake()->randomElement(['Oatmeal', 'Scrambled eggs', 'Pancakes', 'Smoothie bowl', 'Toast & fruit', 'Cereal', 'Yogurt parfait']),
+            ]);
+
+            // Dinner (some linked to recipes)
+            $recipe = $recipes->isNotEmpty() && $d < $recipes->count() ? $recipes[$d] : null;
+            MealPlanEntry::factory()->dinner()->create([
+                'user_id' => $admin->id,
+                'date' => $date,
+                'recipe_id' => $recipe?->id,
+                'name' => $recipe?->name ?? fake()->randomElement(['Grilled chicken', 'Pasta night', 'Stir-fry', 'Soup & salad', 'Taco Tuesday', 'Pizza', 'Burgers']),
+            ]);
+        }
     }
 }

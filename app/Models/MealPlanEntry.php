@@ -3,11 +3,13 @@
 namespace App\Models;
 
 use App\Enums\MealType;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class MealPlanEntry extends Model
 {
+    use HasFactory;
     protected $fillable = [
         'date',
         'meal_type',

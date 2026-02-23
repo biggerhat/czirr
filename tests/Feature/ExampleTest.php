@@ -1,7 +1,9 @@
 <?php
 
 it('returns a successful response', function () {
-    $response = $this->get('/');
+    $user = createAdminUser();
+
+    $response = $this->actingAs($user)->get('/');
 
     $response->assertStatus(200);
 });

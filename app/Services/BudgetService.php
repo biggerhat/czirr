@@ -36,6 +36,7 @@ class BudgetService
 
     public function createBillWithEvent(User $user, array $data): Bill
     {
+        /** @var Bill $bill */
         $bill = $user->bills()->create($data);
 
         if ($bill->is_active) {
@@ -72,6 +73,7 @@ class BudgetService
 
     public function createIncomeWithEvent(User $user, array $data): Income
     {
+        /** @var Income $income */
         $income = $user->incomes()->create($data);
 
         if ($income->is_active) {
@@ -148,7 +150,8 @@ class BudgetService
             ->values();
 
         $categories = $user->budgetCategories()
-            ->ordered()
+            ->orderBy('sort_order')
+            ->orderBy('name')
             ->get();
 
         return [

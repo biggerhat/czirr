@@ -9,6 +9,9 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
+/**
+ * @property-read User|null $linkedUser
+ */
 class FamilyMember extends Model
 {
     use HasFactory;

@@ -25,7 +25,8 @@ class CalendarController extends Controller
             ->get();
 
         $budgetCategories = $user->budgetCategories()
-            ->ordered()
+            ->orderBy('sort_order')
+            ->orderBy('name')
             ->get();
 
         return Inertia::render('calendar/Index', [
