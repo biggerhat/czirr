@@ -23,7 +23,7 @@ class BudgetCategorySeeder extends Seeder
             ['name' => 'Entertainment', 'color' => 'pink'],
             ['name' => 'Healthcare', 'color' => 'rose'],
             ['name' => 'Subscriptions', 'color' => 'orange'],
-        ])->map(fn ($cat, $i) => BudgetCategory::factory()->create([
+        ])->map(fn ($cat, $i) => BudgetCategory::firstOrCreate([
             'user_id' => $admin->id,
             'name' => $cat['name'],
             'color' => $cat['color'],
