@@ -71,6 +71,7 @@ class CookbookController extends Controller
             'member_ids.*' => ['integer', 'exists:family_members,id'],
         ]);
 
+        /** @var Cookbook $cookbook */
         $cookbook = $request->user()->cookbooks()->create([
             'name' => $validated['name'],
             'description' => $validated['description'] ?? null,

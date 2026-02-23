@@ -9,6 +9,11 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
+/**
+ * @property \Carbon\Carbon $starts_at
+ * @property \Carbon\Carbon $ends_at
+ * @property \Carbon\Carbon|null $original_start
+ */
 class Event extends Model
 {
     use HasFactory;
@@ -84,7 +89,7 @@ class Event extends Model
 
     public function getDuration(): int
     {
-        return $this->starts_at->diffInSeconds($this->ends_at);
+        return (int) $this->starts_at->diffInSeconds($this->ends_at);
     }
 
     public function scopeRecurring(Builder $query): Builder

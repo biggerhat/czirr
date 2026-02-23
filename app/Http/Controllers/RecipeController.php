@@ -107,6 +107,7 @@ class RecipeController extends Controller
         $tagIds = $validated['tag_ids'] ?? [];
         unset($validated['tag_ids']);
 
+        /** @var Recipe $recipe */
         $recipe = $request->user()->recipes()->create($validated);
         $recipe->tags()->sync($tagIds);
 

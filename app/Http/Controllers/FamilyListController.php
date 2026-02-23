@@ -55,6 +55,7 @@ class FamilyListController extends Controller
             'member_ids.*' => ['integer', 'exists:family_members,id'],
         ]);
 
+        /** @var FamilyList $list */
         $list = $request->user()->familyLists()->create([
             'name' => $validated['name'],
             'type' => $validated['type'],

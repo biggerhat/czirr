@@ -38,7 +38,7 @@ class RecurringEventService
                     true
                 );
 
-                $recurrences = $transformer->transform($rule, $constraint, static::MAX_OCCURRENCES);
+                $recurrences = $transformer->transform($rule, $constraint, self::MAX_OCCURRENCES);
 
                 foreach ($recurrences as $recurrence) {
                     $occStart = Carbon::instance($recurrence->getStart())->setTimezone('UTC');

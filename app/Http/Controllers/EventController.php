@@ -57,11 +57,11 @@ class EventController extends Controller
             ->where('ends_at', '>=', $start)
             ->orderBy('starts_at')
             ->get()
-            ->map(function ($event) {
-                $event->is_occurrence = true;
-                $event->is_exception = true;
-                $event->master_event_id = $event->recurring_event_id;
-                $event->occurrence_start = $event->original_start?->toIso8601String();
+            ->map(function (Event $event) {
+                $event->setAttribute('is_occurrence', true);
+                $event->setAttribute('is_exception', true);
+                $event->setAttribute('master_event_id', $event->recurring_event_id);
+                $event->setAttribute('occurrence_start', $event->original_start?->toIso8601String());
                 return $event;
             });
 
@@ -79,6 +79,7 @@ class EventController extends Controller
     {
         $validated = $request->validated();
 
+        /** @var Event $event */
         $event = $request->user()->events()->create($request->safe()->only([
             'title', 'description', 'starts_at', 'ends_at', 'is_all_day', 'rrule',
         ]));

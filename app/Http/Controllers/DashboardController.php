@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Bill;
 use App\Models\ChoreAssignment;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -20,12 +21,12 @@ class DashboardController extends Controller
             ->where('is_active', true)
             ->get();
 
-        $upcomingBills = $bills->map(function ($bill) use ($today) {
-            $bill->next_due_date = $bill->nextDueDate($today)->toDateString();
-            $bill->is_paid_this_month = $bill->isPaidForMonth($today);
+        $upcomingBills = $bills->map(function (Bill $bill) use ($today) {
+            $bill->setAttribute('next_due_date', $bill->nextDueDate($today)->toDateString());
+            $bill->setAttribute('is_paid_this_month', $bill->isPaidForMonth($today));
             return $bill;
         })
-            ->filter(fn ($bill) => Carbon::parse($bill->next_due_date)->diffInDays($today, false) >= -14)
+            ->filter(fn (Bill $bill) => Carbon::parse($bill->getAttribute('next_due_date'))->diffInDays($today, false) >= -14)
             ->sortBy('next_due_date')
             ->values();
 

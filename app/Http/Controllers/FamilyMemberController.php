@@ -30,9 +30,8 @@ class FamilyMemberController extends Controller
                 'linked_user_id' => $user->id,
             ]);
 
-            // Ensure owner has admin role
             if (! $user->hasAnyRole(DefaultRole::names())) {
-                $user->assignRole('admin');
+                $user->assignRole('parent');
             }
         }
 
@@ -91,6 +90,7 @@ class FamilyMemberController extends Controller
             ],
         ]);
 
+        /** @var FamilyMember $member */
         $member = $user->familyMembers()->create($validated);
 
         // Assign matching spatie role to linked user
