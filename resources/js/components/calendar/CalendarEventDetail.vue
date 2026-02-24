@@ -168,11 +168,11 @@ async function handleDelete(deleteMode: string) {
                     </div>
                 </div>
 
-                <div class="flex items-start gap-3 text-sm">
+                <div v-if="event.owner" class="flex items-start gap-3 text-sm">
                     <Users class="h-4 w-4 mt-0.5 text-muted-foreground shrink-0" />
                     <div>
                         <div class="text-muted-foreground">Created by {{ event.owner.name }}</div>
-                        <div v-if="event.attendees.length > 0" class="space-y-0.5 mt-1">
+                        <div v-if="event.attendees?.length > 0" class="space-y-0.5 mt-1">
                             <div v-for="a in event.attendees" :key="a.id" class="text-sm">
                                 {{ a.name }}
                                 <span class="text-xs text-muted-foreground">({{ a.pivot?.status ?? 'pending' }})</span>

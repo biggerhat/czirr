@@ -62,12 +62,16 @@ class RecurringEventService
                         'rrule' => $master->rrule,
                         'source' => $master->source,
                         'event_type_id' => $master->event_type_id,
+                        'event_type' => $master->relationLoaded('eventType') ? $master->eventType : null,
                         'is_occurrence' => true,
                         'is_exception' => false,
                         'master_event_id' => $master->id,
                         'occurrence_start' => $occStart->toIso8601String(),
                         'created_at' => $master->created_at,
                         'updated_at' => $master->updated_at,
+                        'owner' => $master->relationLoaded('owner') ? $master->owner : null,
+                        'attendees' => $master->relationLoaded('attendees') ? $master->attendees : [],
+                        'family_members' => $master->relationLoaded('familyMembers') ? $master->familyMembers : [],
                     ];
                 }
             } catch (\Exception $e) {
