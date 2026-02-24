@@ -15,7 +15,7 @@ class RecipeSeeder extends Seeder
     {
         $admin = User::where('email', 'test@example.com')->first();
 
-        if (!$admin) {
+        if (! $admin) {
             $admin = User::first();
         }
 

@@ -19,10 +19,10 @@ class RecurringEventService
     public function expandEventsForRange(Collection $masters, Carbon $rangeStart, Carbon $rangeEnd, string $timezone): array
     {
         $occurrences = [];
-        $transformer = new ArrayTransformer();
+        $transformer = new ArrayTransformer;
 
         foreach ($masters as $master) {
-            if (!$master->isRecurring()) {
+            if (! $master->isRecurring()) {
                 continue;
             }
 
@@ -52,7 +52,7 @@ class RecurringEventService
                     $occEnd = $occStart->copy()->addSeconds($duration);
 
                     $occurrences[] = [
-                        'id' => $master->id . '__' . $occStart->toIso8601String(),
+                        'id' => $master->id.'__'.$occStart->toIso8601String(),
                         'user_id' => $master->user_id,
                         'title' => $master->title,
                         'description' => $master->description,
@@ -135,7 +135,7 @@ class RecurringEventService
         $newMaster->recurrence_exceptions = null;
 
         // If the data includes rrule, use that; otherwise use the master's rrule without UNTIL
-        if (!isset($data['rrule'])) {
+        if (! isset($data['rrule'])) {
             $newMaster->rrule = $this->removeUntilFromRRule($master->getOriginal('rrule') ?? $master->rrule);
         }
 
@@ -178,6 +178,7 @@ class RecurringEventService
         // If the split date is the same as the master's start, delete the entire series
         if ($splitDate->equalTo($master->starts_at)) {
             $master->delete();
+
             return;
         }
 
@@ -203,7 +204,7 @@ class RecurringEventService
 
         // Add new UNTIL in UTC
         $untilUtc = $untilDate->copy()->endOfDay()->setTimezone('UTC');
-        $rrule .= ';UNTIL=' . $untilUtc->format('Ymd\THis\Z');
+        $rrule .= ';UNTIL='.$untilUtc->format('Ymd\THis\Z');
 
         $master->update(['rrule' => $rrule]);
     }

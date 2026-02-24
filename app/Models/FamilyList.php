@@ -18,6 +18,7 @@ class FamilyList extends Model
         'name',
         'type',
         'visibility',
+        'is_pinned',
     ];
 
     protected function casts(): array
@@ -25,6 +26,7 @@ class FamilyList extends Model
         return [
             'type' => ListType::class,
             'visibility' => ListVisibility::class,
+            'is_pinned' => 'boolean',
         ];
     }
 

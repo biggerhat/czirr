@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 class RecipeTag extends Model
 {
     use HasFactory;
+
     protected $fillable = ['name'];
 
     public function user(): BelongsTo

@@ -247,5 +247,4 @@ class CookbookController extends Controller
 
         return Recipe::where('user_id', $ownerId)->orderBy('name')->get();
     }
-
 }

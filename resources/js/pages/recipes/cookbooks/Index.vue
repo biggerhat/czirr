@@ -107,10 +107,10 @@ async function confirmDelete() {
                     <div class="flex items-start justify-between gap-2">
                         <span class="font-medium truncate">{{ cookbook.name }}</span>
                         <div v-if="can.edit || can.delete" class="flex items-center gap-1 shrink-0">
-                            <Button v-if="can.edit" variant="outline" size="icon" class="h-7 w-7" @click.prevent="openEdit(cookbook)">
+                            <Button v-if="can.edit" variant="outline" size="icon" class="h-8 w-8" @click.prevent="openEdit(cookbook)">
                                 <Pencil class="h-3.5 w-3.5" />
                             </Button>
-                            <Button v-if="can.delete" variant="outline" size="icon" class="h-7 w-7 text-destructive" @click.prevent="openDelete(cookbook)">
+                            <Button v-if="can.delete" variant="outline" size="icon" class="h-8 w-8 text-destructive" @click.prevent="openDelete(cookbook)">
                                 <Trash2 class="h-3.5 w-3.5" />
                             </Button>
                         </div>

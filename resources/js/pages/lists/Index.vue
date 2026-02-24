@@ -13,7 +13,7 @@ import {
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog';
-import { Pencil, Plus, ShoppingCart, ShoppingBag, CheckSquare, Heart, List, Trash2 } from 'lucide-vue-next';
+import { Pencil, Pin, PinOff, Plus, ShoppingCart, ShoppingBag, CheckSquare, Heart, List, Trash2 } from 'lucide-vue-next';
 import type { BreadcrumbItem } from '@/types';
 import type { FamilyMember } from '@/types/calendar';
 import type { FamilyList, ListType } from '@/types/lists';
@@ -79,6 +79,19 @@ async function confirmDelete() {
     showDeleteDialog.value = false;
     router.reload();
 }
+
+async function togglePin(list: FamilyList) {
+    await fetch(`/lists/${list.id}/pin`, {
+        method: 'PATCH',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'X-XSRF-TOKEN': decodeURIComponent(
+                document.cookie.match(/XSRF-TOKEN=([^;]+)/)?.[1] ?? '',
+            ),
+        },
+    });
+    router.reload();
+}
 </script>
 
 <template>
@@ -115,10 +128,14 @@ async function confirmDelete() {
                             <span class="font-medium truncate">{{ list.name }}</span>
                         </div>
                         <div class="flex items-center gap-1 shrink-0">
-                            <Button variant="outline" size="icon" class="h-7 w-7" @click.prevent="openEdit(list)">
+                            <Button variant="outline" size="icon" class="h-8 w-8" :title="list.is_pinned ? 'Unpin from dashboard' : 'Pin to dashboard'" @click.prevent="togglePin(list)">
+                                <Pin v-if="!list.is_pinned" class="h-3.5 w-3.5" />
+                                <PinOff v-else class="h-3.5 w-3.5" />
+                            </Button>
+                            <Button variant="outline" size="icon" class="h-8 w-8" @click.prevent="openEdit(list)">
                                 <Pencil class="h-3.5 w-3.5" />
                             </Button>
-                            <Button variant="outline" size="icon" class="h-7 w-7 text-destructive" @click.prevent="openDelete(list)">
+                            <Button variant="outline" size="icon" class="h-8 w-8 text-destructive" @click.prevent="openDelete(list)">
                                 <Trash2 class="h-3.5 w-3.5" />
                             </Button>
                         </div>
@@ -127,10 +144,29 @@ async function confirmDelete() {
                     <div class="flex items-center gap-2">
                         <Badge variant="secondary">{{ LIST_TYPE_LABELS[list.type] }}</Badge>
                         <Badge variant="outline">{{ LIST_VISIBILITY_LABELS[list.visibility] }}</Badge>
+                        <Badge v-if="list.is_pinned" variant="outline" class="gap-1 text-primary border-primary/40">
+                            <Pin class="h-3 w-3" /> Pinned
+                        </Badge>
                     </div>
 
-                    <div class="text-sm text-muted-foreground">
-                        {{ list.items_count ?? 0 }} {{ (list.items_count ?? 0) === 1 ? 'item' : 'items' }}
+                    <!-- Item preview -->
+                    <ul v-if="list.items && list.items.length > 0" class="space-y-1">
+                        <li
+                            v-for="item in list.items"
+                            :key="item.id"
+                            class="flex items-center gap-1.5 text-sm text-muted-foreground"
+                        >
+                            <span class="size-1 shrink-0 rounded-full" :class="item.is_completed ? 'bg-primary' : 'bg-muted-foreground/40'" />
+                            <span class="truncate" :class="item.is_completed ? 'line-through' : ''">
+                                {{ item.name }}<span v-if="item.quantity"> ({{ item.quantity }})</span>
+                            </span>
+                        </li>
+                        <li v-if="(list.items_count ?? 0) > list.items.length" class="text-xs text-muted-foreground/70">
+                            +{{ (list.items_count ?? 0) - list.items.length }} more
+                        </li>
+                    </ul>
+                    <div v-else class="text-sm text-muted-foreground">
+                        No items yet
                     </div>
                 </Link>
             </div>

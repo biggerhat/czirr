@@ -13,7 +13,7 @@ class CookbookSeeder extends Seeder
     public function run(): void
     {
         $admin = User::where('email', 'test@example.com')->first();
-        if (!$admin) {
+        if (! $admin) {
             $admin = User::first();
         }
 

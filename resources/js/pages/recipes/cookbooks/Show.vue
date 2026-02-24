@@ -145,7 +145,7 @@ async function removeRecipe(recipe: Recipe) {
                             v-if="can.edit"
                             variant="outline"
                             size="icon"
-                            class="h-7 w-7 shrink-0 text-destructive"
+                            class="h-8 w-8 shrink-0 text-destructive"
                             @click.prevent="removeRecipe(recipe)"
                         >
                             <Trash2 class="h-3.5 w-3.5" />

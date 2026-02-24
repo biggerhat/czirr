@@ -17,6 +17,8 @@ class FamilyListController extends Controller
     {
         $lists = $this->getVisibleLists($request)
             ->withCount('items')
+            ->with(['items' => fn ($q) => $q->orderBy('is_completed')->orderBy('name')->limit(5)])
+            ->orderBy('is_pinned', 'desc')
             ->orderBy('updated_at', 'desc')
             ->get();
 
@@ -94,6 +96,17 @@ class FamilyListController extends Controller
         } else {
             $familyList->members()->detach();
         }
+
+        return response()->json($familyList);
+    }
+
+    public function togglePin(Request $request, FamilyList $familyList): JsonResponse
+    {
+        if ($familyList->user_id !== $request->user()->id) {
+            abort(403);
+        }
+
+        $familyList->update(['is_pinned' => ! $familyList->is_pinned]);
 
         return response()->json($familyList);
     }

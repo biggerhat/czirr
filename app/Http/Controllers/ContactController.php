@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Models\Contact;
-use App\Models\Event;
 use App\Models\FamilyMember;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
@@ -122,7 +121,7 @@ class ContactController extends Controller
             return;
         }
 
-        $name = trim($contact->first_name . ' ' . $contact->last_name);
+        $name = trim($contact->first_name.' '.$contact->last_name);
         $dob = $contact->date_of_birth;
         $startsAt = Carbon::create($dob->year, $dob->month, $dob->day, 12, 0, 0, 'UTC');
 

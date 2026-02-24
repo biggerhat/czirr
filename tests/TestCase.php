@@ -15,6 +15,7 @@ abstract class TestCase extends BaseTestCase
             $pdo = \Illuminate\Support\Facades\DB::connection()->getPdo();
             $pdo->sqliteCreateFunction('FIELD', function ($value, ...$list) {
                 $index = array_search($value, $list);
+
                 return $index === false ? 0 : $index + 1;
             });
         }

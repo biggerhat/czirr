@@ -14,6 +14,7 @@ import {
     DialogTitle,
 } from '@/components/ui/dialog';
 import { ChevronLeft, ChevronRight, Clock, CookingPot, ExternalLink, Pencil, Plus, Printer, ShoppingCart, Timer, Trash2, Users } from 'lucide-vue-next';
+import { useSwipe } from '@/composables/useSwipe';
 import type { BreadcrumbItem } from '@/types';
 import type { CustomMeal, MealPlanEntry, MealType } from '@/types/meal-plans';
 import { MEAL_TYPE_LABELS, MEAL_TYPES } from '@/types/meal-plans';
@@ -264,14 +265,43 @@ const mealTypeColors: Record<MealType, string> = {
     dinner: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300',
     snack: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300',
 };
+
+const mealTypeBorderColors: Record<MealType, string> = {
+    breakfast: 'border-amber-300 dark:border-amber-700',
+    lunch: 'border-green-300 dark:border-green-700',
+    dinner: 'border-blue-300 dark:border-blue-700',
+    snack: 'border-purple-300 dark:border-purple-700',
+};
+
+// Mobile day view
+const selectedDayIndex = ref(0);
+
+const selectedDay = computed(() => days.value[selectedDayIndex.value]);
+
+function prevDay() {
+    if (selectedDayIndex.value > 0) selectedDayIndex.value--;
+}
+
+function nextDay() {
+    if (selectedDayIndex.value < days.value.length - 1) selectedDayIndex.value++;
+}
+
+function formatFullDay(dateStr: string): string {
+    const d = new Date(dateStr + 'T00:00:00');
+    return d.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
+}
+
+const DAY_ABBREVS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+
+const { onTouchStart: swipeTouchStart, onTouchEnd: swipeTouchEnd } = useSwipe(nextDay, prevDay);
 </script>
 
 <template>
     <AppLayout :breadcrumbs="breadcrumbs">
         <div class="flex h-full flex-1 flex-col gap-4 p-4" data-print-hide>
             <!-- Header -->
-            <div class="flex items-center justify-between">
-                <h2 class="text-lg font-semibold">Meal Plans</h2>
+            <div class="flex items-center justify-between gap-2">
+                <h2 class="text-lg font-semibold shrink-0">Meal Plans</h2>
                 <div class="flex items-center gap-2">
                     <Button size="sm" variant="outline" @click="navigate('prev')">
                         <ChevronLeft class="h-4 w-4" />
@@ -282,17 +312,34 @@ const mealTypeColors: Record<MealType, string> = {
                     <Button size="sm" variant="outline" @click="navigate('next')">
                         <ChevronRight class="h-4 w-4" />
                     </Button>
-                    <Button v-if="entries.length > 0" size="sm" variant="outline" @click="printPlan">
+                    <Button v-if="entries.length > 0" size="sm" variant="outline" class="hidden sm:inline-flex" @click="printPlan">
                         <Printer class="h-4 w-4 mr-1" />
                         Print
+                    </Button>
+                    <Button v-if="can.generateGroceryList" size="sm" variant="outline" class="hidden sm:inline-flex" :disabled="isGeneratingList" @click="generateGroceryList()">
+                        <ShoppingCart class="h-4 w-4 mr-1" />
+                        {{ isGeneratingList ? 'Generating...' : 'Grocery List' }}
+                    </Button>
+                    <span class="text-sm font-medium ml-2 hidden md:inline">{{ formatPeriodLabel() }}</span>
+                </div>
+            </div>
+
+            <!-- Mobile action row + period label -->
+            <div class="flex items-center justify-between sm:hidden">
+                <span class="text-sm font-medium">{{ formatPeriodLabel() }}</span>
+                <div class="flex items-center gap-2">
+                    <Button v-if="entries.length > 0" size="sm" variant="outline" @click="printPlan">
+                        <Printer class="h-4 w-4" />
                     </Button>
                     <Button v-if="can.generateGroceryList" size="sm" variant="outline" :disabled="isGeneratingList" @click="generateGroceryList()">
                         <ShoppingCart class="h-4 w-4 mr-1" />
                         {{ isGeneratingList ? 'Generating...' : 'Grocery List' }}
                     </Button>
-                    <span class="text-sm font-medium ml-2 hidden sm:inline">{{ formatPeriodLabel() }}</span>
                 </div>
             </div>
+
+            <!-- Period label (tablet - between sm and md) -->
+            <div class="text-sm font-medium text-center hidden sm:block md:hidden">{{ formatPeriodLabel() }}</div>
 
             <!-- Grocery list error -->
             <div v-if="generateError" class="flex items-center justify-between rounded-md border border-destructive/50 bg-destructive/10 px-3 py-2 text-sm text-destructive">
@@ -300,11 +347,89 @@ const mealTypeColors: Record<MealType, string> = {
                 <button class="ml-2 font-medium hover:underline" @click="generateError = ''">Dismiss</button>
             </div>
 
-            <!-- Period label (mobile) -->
-            <div class="text-sm font-medium text-center sm:hidden">{{ formatPeriodLabel() }}</div>
+            <!-- ===== MOBILE DAY VIEW ===== -->
+            <div class="md:hidden space-y-3" @touchstart="swipeTouchStart" @touchend="swipeTouchEnd">
+                <!-- Day strip -->
+                <div class="flex items-center gap-1">
+                    <button
+                        class="p-1 rounded hover:bg-accent shrink-0"
+                        :disabled="selectedDayIndex === 0"
+                        :class="{ 'opacity-30': selectedDayIndex === 0 }"
+                        @click="prevDay"
+                    >
+                        <ChevronLeft class="h-4 w-4" />
+                    </button>
+                    <div class="flex-1 flex gap-0.5 overflow-x-auto">
+                        <button
+                            v-for="(date, i) in days"
+                            :key="date"
+                            class="flex flex-col items-center px-2 py-1 rounded-md text-xs min-w-[2.5rem] transition-colors"
+                            :class="[
+                                i === selectedDayIndex ? 'bg-primary text-primary-foreground' : date === today ? 'bg-primary/10' : 'hover:bg-muted',
+                            ]"
+                            @click="selectedDayIndex = i"
+                        >
+                            <span class="font-medium">{{ DAY_ABBREVS[i % 7] }}</span>
+                            <span class="text-[10px]" :class="i === selectedDayIndex ? 'text-primary-foreground/80' : 'text-muted-foreground'">{{ formatDayNumber(date) }}</span>
+                        </button>
+                    </div>
+                    <button
+                        class="p-1 rounded hover:bg-accent shrink-0"
+                        :disabled="selectedDayIndex === days.length - 1"
+                        :class="{ 'opacity-30': selectedDayIndex === days.length - 1 }"
+                        @click="nextDay"
+                    >
+                        <ChevronRight class="h-4 w-4" />
+                    </button>
+                </div>
 
-            <!-- Week grids -->
-            <div v-for="(week, weekIndex) in [week1, week2]" :key="weekIndex" class="space-y-1">
+                <!-- Current day header -->
+                <div class="text-center">
+                    <div class="text-sm font-semibold">{{ formatFullDay(selectedDay) }}</div>
+                    <div class="text-xs text-muted-foreground">Week {{ selectedDayIndex < 7 ? 1 : 2 }}</div>
+                </div>
+
+                <!-- Meal type sections -->
+                <div v-for="mt in MEAL_TYPES" :key="mt" class="rounded-lg border overflow-hidden">
+                    <div class="px-3 py-2 text-sm font-medium border-b" :class="[mealTypeColors[mt], mealTypeBorderColors[mt]]">
+                        {{ MEAL_TYPE_LABELS[mt] }}
+                    </div>
+                    <div class="p-2 space-y-1">
+                        <button
+                            v-for="entry in getEntries(selectedDay, mt)"
+                            :key="entry.id"
+                            type="button"
+                            class="w-full flex items-center gap-2 rounded-md px-3 py-2 text-sm text-left hover:bg-accent transition-colors"
+                            @click="openDetail(entry)"
+                        >
+                            <CookingPot v-if="entry.recipe_id" class="h-3.5 w-3.5 shrink-0 opacity-60" />
+                            <span class="flex-1 min-w-0 truncate">{{ entry.name }}</span>
+                            <span v-if="can.edit || can.delete" class="flex items-center gap-1 shrink-0">
+                                <button v-if="can.edit" class="p-1 rounded hover:bg-muted" @click.stop="openEditEntry(entry)">
+                                    <Pencil class="h-3.5 w-3.5 text-muted-foreground" />
+                                </button>
+                                <button v-if="can.delete" class="p-1 rounded hover:bg-muted" @click.stop="openDelete(entry)">
+                                    <Trash2 class="h-3.5 w-3.5 text-destructive" />
+                                </button>
+                            </span>
+                        </button>
+                        <div v-if="getEntries(selectedDay, mt).length === 0" class="text-xs text-muted-foreground/50 text-center py-2">
+                            No {{ MEAL_TYPE_LABELS[mt].toLowerCase() }}
+                        </div>
+                        <button
+                            v-if="can.create"
+                            class="w-full flex items-center justify-center gap-1 rounded-md border border-dashed border-border text-muted-foreground hover:bg-accent transition-colors text-sm py-2"
+                            @click="openAddEntry(selectedDay, mt)"
+                        >
+                            <Plus class="h-3.5 w-3.5" />
+                            Add
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ===== DESKTOP WEEK GRIDS ===== -->
+            <div v-for="(week, weekIndex) in [week1, week2]" :key="weekIndex" class="hidden md:block space-y-1">
                 <div class="text-xs font-medium text-muted-foreground px-1">
                     Week {{ weekIndex + 1 }}
                 </div>
@@ -376,8 +501,8 @@ const mealTypeColors: Record<MealType, string> = {
                 </div>
             </div>
 
-            <!-- Meal type legend (visible on smaller screens where the row labels are hidden) -->
-            <div class="flex flex-wrap items-center gap-2 text-xs lg:hidden">
+            <!-- Meal type legend (visible on md screens where the row labels are hidden, not mobile since mobile has its own view) -->
+            <div class="hidden md:flex lg:hidden flex-wrap items-center gap-2 text-xs">
                 <span class="text-muted-foreground font-medium">Meals:</span>
                 <span v-for="mt in MEAL_TYPES" :key="mt" class="flex items-center gap-1">
                     <span class="h-2.5 w-2.5 rounded-sm" :class="mealTypeColors[mt]" />

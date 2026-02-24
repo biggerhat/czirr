@@ -29,7 +29,7 @@ class BudgetController extends Controller
             );
         } else {
             $monthParam = $request->input('month');
-            $month = $monthParam ? Carbon::parse($monthParam . '-01') : Carbon::now();
+            $month = $monthParam ? Carbon::parse($monthParam.'-01') : Carbon::now();
             $overview = $this->budgetService->getMonthlyOverview($request->user(), $month);
         }
 

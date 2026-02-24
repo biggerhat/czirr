@@ -279,28 +279,30 @@ function getCategoryDotClass(category: BudgetCategory): string {
             />
 
             <!-- Date Range -->
-            <div class="flex items-center gap-2 -mt-2">
-                <CalendarRange class="h-4 w-4 shrink-0 text-muted-foreground" />
-                <Input type="date" v-model="rangeStart" class="w-[160px] h-8 text-sm" />
-                <span class="text-sm text-muted-foreground">to</span>
-                <Input type="date" v-model="rangeEnd" class="w-[160px] h-8 text-sm" />
-                <Button size="sm" variant="outline" class="h-8" @click="applyDateRange" :disabled="!rangeStart || !rangeEnd || rangeStart > rangeEnd">
-                    Apply
-                </Button>
-                <Button v-if="isCustomRange" size="sm" variant="ghost" class="h-8" @click="clearDateRange">
-                    <X class="h-3.5 w-3.5 mr-1" />
-                    Reset
-                </Button>
+            <div class="flex flex-col sm:flex-row sm:items-center gap-2 -mt-2">
+                <CalendarRange class="h-4 w-4 shrink-0 text-muted-foreground hidden sm:block" />
+                <Input type="date" v-model="rangeStart" class="w-full sm:w-[160px] h-8 text-sm" />
+                <span class="text-sm text-muted-foreground hidden sm:inline">to</span>
+                <Input type="date" v-model="rangeEnd" class="w-full sm:w-[160px] h-8 text-sm" />
+                <div class="flex items-center gap-2">
+                    <Button size="sm" variant="outline" class="h-8 w-full sm:w-auto" @click="applyDateRange" :disabled="!rangeStart || !rangeEnd || rangeStart > rangeEnd">
+                        Apply
+                    </Button>
+                    <Button v-if="isCustomRange" size="sm" variant="ghost" class="h-8 w-full sm:w-auto" @click="clearDateRange">
+                        <X class="h-3.5 w-3.5 mr-1" />
+                        Reset
+                    </Button>
+                </div>
             </div>
 
             <!-- Summary Cards -->
-            <div class="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-6">
+            <div class="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 lg:grid-cols-6">
                 <Card>
                     <CardHeader class="pb-2">
                         <CardTitle class="text-sm font-medium text-muted-foreground">Total Income</CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <p class="text-2xl font-bold text-emerald-600 dark:text-emerald-400">{{ formatCurrency(totalIncome) }}</p>
+                        <p class="text-xl sm:text-2xl font-bold text-emerald-600 dark:text-emerald-400">{{ formatCurrency(totalIncome) }}</p>
                     </CardContent>
                 </Card>
                 <Card>
@@ -308,7 +310,7 @@ function getCategoryDotClass(category: BudgetCategory): string {
                         <CardTitle class="text-sm font-medium text-muted-foreground">Total Bills</CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <p class="text-2xl font-bold">{{ formatCurrency(totalBills) }}</p>
+                        <p class="text-xl sm:text-2xl font-bold">{{ formatCurrency(totalBills) }}</p>
                     </CardContent>
                 </Card>
                 <Card>
@@ -316,7 +318,7 @@ function getCategoryDotClass(category: BudgetCategory): string {
                         <CardTitle class="text-sm font-medium text-muted-foreground">Paid</CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <p class="text-2xl font-bold text-emerald-600 dark:text-emerald-400">{{ formatCurrency(totalPaid) }}</p>
+                        <p class="text-xl sm:text-2xl font-bold text-emerald-600 dark:text-emerald-400">{{ formatCurrency(totalPaid) }}</p>
                     </CardContent>
                 </Card>
                 <Card>
@@ -324,7 +326,7 @@ function getCategoryDotClass(category: BudgetCategory): string {
                         <CardTitle class="text-sm font-medium text-muted-foreground">Unpaid</CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <p class="text-2xl font-bold text-rose-600 dark:text-rose-400">{{ formatCurrency(totalUnpaid) }}</p>
+                        <p class="text-xl sm:text-2xl font-bold text-rose-600 dark:text-rose-400">{{ formatCurrency(totalUnpaid) }}</p>
                     </CardContent>
                 </Card>
                 <Card>
@@ -332,7 +334,7 @@ function getCategoryDotClass(category: BudgetCategory): string {
                         <CardTitle class="text-sm font-medium text-muted-foreground">Total Expenses</CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <p class="text-2xl font-bold">{{ formatCurrency(totalExpenses) }}</p>
+                        <p class="text-xl sm:text-2xl font-bold">{{ formatCurrency(totalExpenses) }}</p>
                     </CardContent>
                 </Card>
                 <Card>
@@ -340,7 +342,7 @@ function getCategoryDotClass(category: BudgetCategory): string {
                         <CardTitle class="text-sm font-medium text-muted-foreground">Net</CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <p class="text-2xl font-bold" :class="netBalance >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'">
+                        <p class="text-xl sm:text-2xl font-bold" :class="netBalance >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'">
                             {{ formatCurrency(netBalance) }}
                         </p>
                     </CardContent>
@@ -366,15 +368,16 @@ function getCategoryDotClass(category: BudgetCategory): string {
                         class="flex items-center gap-3 rounded-lg border px-4 py-3"
                         :class="{ 'opacity-50': !income.is_active }"
                     >
-                        <div class="flex-1 min-w-0">
-                            <span class="font-medium">{{ income.name }}</span>
-                            <span class="ml-2 text-sm text-muted-foreground">
-                                {{ ordinalDay(new Date(income.start_date).getUTCDate()) }}
-                                <span class="capitalize"> &middot; {{ income.frequency }}</span>
-                            </span>
+                        <div class="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 flex-1 min-w-0">
+                            <div class="min-w-0">
+                                <span class="font-medium">{{ income.name }}</span>
+                                <span class="ml-2 text-sm text-muted-foreground">
+                                    {{ ordinalDay(new Date(income.start_date).getUTCDate()) }}
+                                    <span class="capitalize"> &middot; {{ income.frequency }}</span>
+                                </span>
+                            </div>
+                            <span class="font-semibold tabular-nums text-emerald-600 dark:text-emerald-400 sm:ml-auto">{{ formatCurrency(Number(income.amount)) }}</span>
                         </div>
-
-                        <span class="font-semibold tabular-nums text-emerald-600 dark:text-emerald-400">{{ formatCurrency(Number(income.amount)) }}</span>
 
                         <div class="flex items-center gap-1">
                             <Button variant="ghost" size="icon" class="h-8 w-8" @click="openEditIncome(income)">
@@ -390,9 +393,9 @@ function getCategoryDotClass(category: BudgetCategory): string {
 
             <!-- Bills Section -->
             <div>
-                <div class="flex items-center justify-between mb-3">
+                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-3">
                     <h3 class="text-lg font-semibold">Bills</h3>
-                    <div class="flex items-center gap-2">
+                    <div class="flex flex-wrap items-center gap-2">
                         <Button
                             variant="ghost"
                             size="icon"
@@ -405,7 +408,7 @@ function getCategoryDotClass(category: BudgetCategory): string {
                             <List v-else class="h-4 w-4" />
                         </Button>
                         <Select v-model="billCategoryFilter">
-                            <SelectTrigger class="w-[200px]">
+                            <SelectTrigger class="w-full sm:w-[200px]">
                                 <SelectValue placeholder="All Categories" />
                             </SelectTrigger>
                             <SelectContent>
@@ -456,17 +459,18 @@ function getCategoryDotClass(category: BudgetCategory): string {
                                     <Check v-if="bill.is_paid_this_month" class="h-3 w-3" />
                                 </div>
 
-                                <div class="flex-1 min-w-0">
-                                    <span class="font-medium" :class="{ 'line-through text-muted-foreground': bill.is_paid_this_month }">
-                                        {{ bill.name }}
-                                    </span>
-                                    <span class="ml-2 text-sm text-muted-foreground">
-                                        Due {{ ordinalDay(new Date(bill.start_date).getUTCDate()) }}
-                                        <span v-if="bill.frequency !== 'monthly'" class="capitalize"> &middot; {{ bill.frequency }}</span>
-                                    </span>
+                                <div class="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 flex-1 min-w-0">
+                                    <div class="min-w-0">
+                                        <span class="font-medium" :class="{ 'line-through text-muted-foreground': bill.is_paid_this_month }">
+                                            {{ bill.name }}
+                                        </span>
+                                        <span class="ml-2 text-sm text-muted-foreground">
+                                            Due {{ ordinalDay(new Date(bill.start_date).getUTCDate()) }}
+                                            <span v-if="bill.frequency !== 'monthly'" class="capitalize"> &middot; {{ bill.frequency }}</span>
+                                        </span>
+                                    </div>
+                                    <span class="font-semibold tabular-nums sm:ml-auto">{{ formatCurrency(Number(bill.amount)) }}</span>
                                 </div>
-
-                                <span class="font-semibold tabular-nums">{{ formatCurrency(Number(bill.amount)) }}</span>
 
                                 <div class="flex items-center gap-1">
                                     <Button variant="ghost" size="icon" class="h-8 w-8" @click.stop="openEditBill(bill)">
@@ -504,17 +508,18 @@ function getCategoryDotClass(category: BudgetCategory): string {
                             :class="getCategoryDotClass(bill.category)"
                         />
 
-                        <div class="flex-1 min-w-0">
-                            <span class="font-medium" :class="{ 'line-through text-muted-foreground': bill.is_paid_this_month }">
-                                {{ bill.name }}
-                            </span>
-                            <span class="ml-2 text-sm text-muted-foreground">
-                                Due {{ ordinalDay(new Date(bill.start_date).getUTCDate()) }}
-                                <span v-if="bill.frequency !== 'monthly'" class="capitalize"> &middot; {{ bill.frequency }}</span>
-                            </span>
+                        <div class="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 flex-1 min-w-0">
+                            <div class="min-w-0">
+                                <span class="font-medium" :class="{ 'line-through text-muted-foreground': bill.is_paid_this_month }">
+                                    {{ bill.name }}
+                                </span>
+                                <span class="ml-2 text-sm text-muted-foreground">
+                                    Due {{ ordinalDay(new Date(bill.start_date).getUTCDate()) }}
+                                    <span v-if="bill.frequency !== 'monthly'" class="capitalize"> &middot; {{ bill.frequency }}</span>
+                                </span>
+                            </div>
+                            <span class="font-semibold tabular-nums sm:ml-auto">{{ formatCurrency(Number(bill.amount)) }}</span>
                         </div>
-
-                        <span class="font-semibold tabular-nums">{{ formatCurrency(Number(bill.amount)) }}</span>
 
                         <div class="flex items-center gap-1">
                             <Button variant="ghost" size="icon" class="h-8 w-8" @click.stop="openEditBill(bill)">
@@ -551,15 +556,16 @@ function getCategoryDotClass(category: BudgetCategory): string {
                             :class="getCategoryDotClass(expense.category)"
                         />
 
-                        <div class="flex-1 min-w-0">
-                            <span class="font-medium">{{ expense.name }}</span>
-                            <span class="ml-2 text-sm text-muted-foreground">
-                                {{ new Date(expense.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', timeZone: 'UTC' }) }}
-                            </span>
-                            <span v-if="expense.bill_id" class="ml-1 text-xs text-muted-foreground">(bill payment)</span>
+                        <div class="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 flex-1 min-w-0">
+                            <div class="min-w-0">
+                                <span class="font-medium">{{ expense.name }}</span>
+                                <span class="ml-2 text-sm text-muted-foreground">
+                                    {{ new Date(expense.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', timeZone: 'UTC' }) }}
+                                </span>
+                                <span v-if="expense.bill_id" class="ml-1 text-xs text-muted-foreground">(bill payment)</span>
+                            </div>
+                            <span class="font-semibold tabular-nums sm:ml-auto">{{ formatCurrency(Number(expense.amount)) }}</span>
                         </div>
-
-                        <span class="font-semibold tabular-nums">{{ formatCurrency(Number(expense.amount)) }}</span>
 
                         <Button variant="ghost" size="icon" class="h-8 w-8 text-destructive" @click="deleteExpense(expense)">
                             <Trash2 class="h-3.5 w-3.5" />

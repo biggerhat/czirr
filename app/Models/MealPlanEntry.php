@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class MealPlanEntry extends Model
 {
     use HasFactory;
+
     protected $fillable = [
         'date',
         'meal_type',
