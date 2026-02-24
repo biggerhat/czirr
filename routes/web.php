@@ -22,13 +22,22 @@ use App\Http\Controllers\RecipeController;
 use App\Http\Controllers\RecipeTagController;
 use App\Http\Controllers\RoleController;
 use Illuminate\Support\Facades\Route;
+use Inertia\Inertia;
 
 Route::get('/offline', fn () => view('offline'));
 
-Route::get('/', [DashboardController::class, 'index'])
-    ->middleware(['auth', 'verified', 'family'])->name('dashboard');
+Route::get('/', function () {
+    if (auth()->check()) {
+        return redirect('/dashboard');
+    }
 
-Route::get('dashboard', fn () => redirect('/'));
+    return Inertia::render('Welcome', [
+        'canRegister' => Route::has('register'),
+    ]);
+})->name('home');
+
+Route::get('/dashboard', [DashboardController::class, 'index'])
+    ->middleware(['auth', 'verified', 'family'])->name('dashboard');
 
 Route::middleware(['auth', 'verified', 'family'])->group(function () {
     // Calendar (no specific permission — all authenticated family members can view)
