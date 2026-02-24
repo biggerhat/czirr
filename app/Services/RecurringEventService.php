@@ -62,14 +62,10 @@ class RecurringEventService
                         'rrule' => $master->rrule,
                         'source' => $master->source,
                         'event_type_id' => $master->event_type_id,
-                        'event_type' => $master->eventType,
                         'is_occurrence' => true,
                         'is_exception' => false,
                         'master_event_id' => $master->id,
                         'occurrence_start' => $occStart->toIso8601String(),
-                        'owner' => $master->owner,
-                        'attendees' => $master->attendees,
-                        'family_members' => $master->familyMembers,
                         'created_at' => $master->created_at,
                         'updated_at' => $master->updated_at,
                     ];
@@ -108,7 +104,7 @@ class RecurringEventService
         $exception->attendees()->sync($master->attendees->pluck('id'));
         $exception->familyMembers()->sync($master->familyMembers->pluck('id'));
 
-        $exception->load(['owner:id,name,email', 'attendees:id,name,email', 'familyMembers']);
+        $exception->load(['owner:id,name,email', 'attendees:id,name,email', 'familyMembers:id,name,nickname,color']);
 
         return $exception;
     }
@@ -147,7 +143,7 @@ class RecurringEventService
         $newMaster->attendees()->sync($master->attendees->pluck('id'));
         $newMaster->familyMembers()->sync($master->familyMembers->pluck('id'));
 
-        $newMaster->load(['owner:id,name,email', 'attendees:id,name,email', 'familyMembers']);
+        $newMaster->load(['owner:id,name,email', 'attendees:id,name,email', 'familyMembers:id,name,nickname,color']);
 
         return $newMaster;
     }

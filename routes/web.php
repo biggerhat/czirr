@@ -23,6 +23,8 @@ use App\Http\Controllers\RecipeTagController;
 use App\Http\Controllers\RoleController;
 use Illuminate\Support\Facades\Route;
 
+Route::get('/offline', fn () => view('offline'));
+
 Route::get('/', [DashboardController::class, 'index'])
     ->middleware(['auth', 'verified', 'family'])->name('dashboard');
 
