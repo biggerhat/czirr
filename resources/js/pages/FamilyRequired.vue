@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { Head } from '@inertiajs/vue3';
-import AuthBase from '@/layouts/AuthLayout.vue';
-import { Button } from '@/components/ui/button';
 import { router } from '@inertiajs/vue3';
+import { Button } from '@/components/ui/button';
+import AuthBase from '@/layouts/AuthLayout.vue';
 
 function logout() {
     router.post('/logout');

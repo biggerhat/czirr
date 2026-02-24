@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue';
 import { usePage } from '@inertiajs/vue3';
-import { Pencil, Trash2, Clock, Users, Repeat, Receipt, DollarSign } from 'lucide-vue-next';
+import { Pencil, Trash2, Clock, Users, Repeat } from 'lucide-vue-next';
+import { ref, computed } from 'vue';
+import RecurrenceEditModeDialog from '@/components/calendar/RecurrenceEditModeDialog.vue';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
@@ -19,10 +20,9 @@ import {
     SheetTitle,
     SheetFooter,
 } from '@/components/ui/sheet';
-import RecurrenceEditModeDialog from '@/components/calendar/RecurrenceEditModeDialog.vue';
-import type { CalendarEvent, EditMode } from '@/types/calendar';
 import { EVENT_COLORS, getEventColor, formatEventTime, formatEventDateFull } from '@/lib/calendar';
 import { humanReadableRRule } from '@/lib/recurrence';
+import type { CalendarEvent, EditMode } from '@/types/calendar';
 
 const props = defineProps<{
     event: CalendarEvent | null;

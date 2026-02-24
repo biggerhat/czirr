@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3';
-import AppLayout from '@/layouts/AppLayout.vue';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Card, CardHeader, CardContent, CardTitle, CardDescription, CardAction } from '@/components/ui/card';
-import { Separator } from '@/components/ui/separator';
 import { BookOpen, Clock, ExternalLink, Pencil, Timer, Users } from 'lucide-vue-next';
 import { computed } from 'vue';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card, CardHeader, CardContent, CardTitle, CardDescription, CardAction } from '@/components/ui/card';
+import { Separator } from '@/components/ui/separator';
+import AppLayout from '@/layouts/AppLayout.vue';
 import type { BreadcrumbItem } from '@/types';
 import type { Recipe, Cookbook } from '@/types/recipes';
 import { DIFFICULTY_LABELS, DIFFICULTY_COLORS } from '@/types/recipes';

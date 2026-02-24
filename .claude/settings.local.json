@@ -32,7 +32,8 @@
       "WebSearch",
       "WebFetch(domain:vueuse.org)",
       "Bash(tee:*)",
-      "Bash(./vendor/bin/sail bin phpstan:*)"
+      "Bash(./vendor/bin/sail bin phpstan:*)",
+      "Bash(npm run lint:*)"
     ]
   }
 }

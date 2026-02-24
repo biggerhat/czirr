@@ -1,7 +1,13 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
 import { Head } from '@inertiajs/vue3';
+import { CookingPot } from 'lucide-vue-next';
+import { ref, onMounted } from 'vue';
+import { Badge } from '@/components/ui/badge';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Spinner } from '@/components/ui/spinner';
 import AppLayout from '@/layouts/AppLayout.vue';
+import { EVENT_COLORS, getEventColor, formatEventTime, formatEventDate } from '@/lib/calendar';
 import { type BreadcrumbItem } from '@/types';
 import type { UpcomingBill } from '@/types/budgeting';
 import type { CalendarEvent } from '@/types/calendar';
@@ -9,12 +15,6 @@ import type { ChoreAssignment } from '@/types/chores';
 import type { FamilyList, FamilyListItem } from '@/types/lists';
 import type { MealType } from '@/types/meal-plans';
 import { MEAL_TYPE_LABELS } from '@/types/meal-plans';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Spinner } from '@/components/ui/spinner';
-import { CookingPot } from 'lucide-vue-next';
-import { EVENT_COLORS, getEventColor, formatEventTime, formatEventDate } from '@/lib/calendar';
 
 type DashboardMeal = {
     id: number;
@@ -23,7 +23,7 @@ type DashboardMeal = {
     recipe_id: number | null;
 };
 
-const props = defineProps<{
+defineProps<{
     upcomingBills: UpcomingBill[];
     todaysChores: ChoreAssignment[];
     todaysMeals: DashboardMeal[];

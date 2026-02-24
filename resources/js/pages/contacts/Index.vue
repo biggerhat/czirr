@@ -1,10 +1,9 @@
 <script setup lang="ts">
-import { ref } from 'vue';
 import { router } from '@inertiajs/vue3';
-import AppLayout from '@/layouts/AppLayout.vue';
+import { Mail, MapPin, Pencil, Phone, Plus, Search, Trash2 } from 'lucide-vue-next';
+import { ref } from 'vue';
 import ContactModal from '@/components/contacts/ContactModal.vue';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import {
     Dialog,
     DialogContent,
@@ -13,7 +12,8 @@ import {
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog';
-import { Mail, MapPin, Pencil, Phone, Plus, Search, Trash2 } from 'lucide-vue-next';
+import { Input } from '@/components/ui/input';
+import AppLayout from '@/layouts/AppLayout.vue';
 import type { BreadcrumbItem } from '@/types';
 import type { Contact } from '@/types/contacts';
 

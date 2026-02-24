@@ -1,17 +1,11 @@
 <script setup lang="ts">
+import { CalendarDays, FileText, DollarSign, Receipt, Check } from 'lucide-vue-next';
 import { ref, computed, watch, nextTick } from 'vue';
+import RecurrenceEditor from '@/components/calendar/RecurrenceEditor.vue';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Checkbox } from '@/components/ui/checkbox';
-import {
-    Sheet,
-    SheetContent,
-    SheetFooter,
-    SheetHeader,
-    SheetTitle,
-} from '@/components/ui/sheet';
 import {
     Select,
     SelectContent,
@@ -19,13 +13,19 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-import RecurrenceEditor from '@/components/calendar/RecurrenceEditor.vue';
-import { CalendarDays, FileText, DollarSign, Receipt, Check } from 'lucide-vue-next';
-import type { CalendarEvent, EditMode, FamilyMember } from '@/types/calendar';
-import type { BudgetCategory } from '@/types/budgeting';
-import type { RecurrenceConfig } from '@/lib/recurrence';
+import {
+    Sheet,
+    SheetContent,
+    SheetFooter,
+    SheetHeader,
+    SheetTitle,
+} from '@/components/ui/sheet';
+import { Textarea } from '@/components/ui/textarea';
 import { EVENT_COLORS, toLocalDateString } from '@/lib/calendar';
+import type { RecurrenceConfig } from '@/lib/recurrence';
 import { defaultRecurrenceConfig, buildRRuleString, parseRRuleString } from '@/lib/recurrence';
+import type { BudgetCategory } from '@/types/budgeting';
+import type { CalendarEvent, EditMode, FamilyMember } from '@/types/calendar';
 
 export type EntryType = 'event' | 'bill' | 'expense' | 'income';
 
@@ -71,7 +71,7 @@ const budgetCategoryId = ref('');
 
 // --- Bill fields ---
 const billStartDate = ref('');
-const billFrequency = ref<'monthly' | 'quarterly' | 'yearly'>('monthly');
+const billFrequency = ref<'once' | 'weekly' | 'biweekly' | 'monthly' | 'quarterly' | 'yearly'>('monthly');
 const billIsActive = ref(true);
 
 // --- Expense fields ---
@@ -530,6 +530,9 @@ async function save() {
                                     <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
+                                    <SelectItem value="once">Once</SelectItem>
+                                    <SelectItem value="weekly">Weekly</SelectItem>
+                                    <SelectItem value="biweekly">Biweekly</SelectItem>
                                     <SelectItem value="monthly">Monthly</SelectItem>
                                     <SelectItem value="quarterly">Quarterly</SelectItem>
                                     <SelectItem value="yearly">Yearly</SelectItem>

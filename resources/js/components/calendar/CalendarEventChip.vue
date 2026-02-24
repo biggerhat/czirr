@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { computed } from 'vue';
 import { Repeat } from 'lucide-vue-next';
-import type { CalendarEvent } from '@/types/calendar';
+import { computed } from 'vue';
 import { EVENT_COLORS, getEventColor, formatEventTime } from '@/lib/calendar';
+import type { CalendarEvent } from '@/types/calendar';
 
 const props = defineProps<{
     event: CalendarEvent;

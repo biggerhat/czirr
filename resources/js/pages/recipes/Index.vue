@@ -1,11 +1,10 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue';
 import { Link, router } from '@inertiajs/vue3';
-import AppLayout from '@/layouts/AppLayout.vue';
+import { BookOpen, Pencil, Plus, Search, Trash2, X } from 'lucide-vue-next';
+import { ref, computed } from 'vue';
 import RecipeCard from '@/components/recipes/RecipeCard.vue';
-import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
 import {
     Dialog,
     DialogContent,
@@ -14,6 +13,7 @@ import {
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
 import {
     Select,
     SelectContent,
@@ -21,7 +21,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-import { BookOpen, Pencil, Plus, Search, Trash2, X } from 'lucide-vue-next';
+import AppLayout from '@/layouts/AppLayout.vue';
 import type { BreadcrumbItem } from '@/types';
 import type { Recipe, RecipeDifficulty, RecipeTag } from '@/types/recipes';
 import { DIFFICULTY_LABELS } from '@/types/recipes';

@@ -1,9 +1,9 @@
 <script setup lang="ts">
+import { Check } from 'lucide-vue-next';
 import { ref, computed, watch } from 'vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Check } from 'lucide-vue-next';
 import {
     Select,
     SelectContent,
@@ -18,8 +18,8 @@ import {
     SheetHeader,
     SheetTitle,
 } from '@/components/ui/sheet';
-import type { FamilyList, ListType, ListVisibility } from '@/types/lists';
 import type { FamilyMember } from '@/types/calendar';
+import type { FamilyList, ListType, ListVisibility } from '@/types/lists';
 import { LIST_TYPE_LABELS, LIST_VISIBILITY_LABELS } from '@/types/lists';
 
 const props = defineProps<{

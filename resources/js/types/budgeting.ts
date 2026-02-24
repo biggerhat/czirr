@@ -12,13 +12,14 @@ export type Bill = {
     name: string;
     amount: number;
     start_date: string;
-    frequency: 'monthly' | 'quarterly' | 'yearly';
+    frequency: 'once' | 'weekly' | 'biweekly' | 'monthly' | 'quarterly' | 'yearly';
     is_active: boolean;
     notes: string | null;
     event_id: number | null;
     budget_category_id: number;
     category: BudgetCategory;
     is_paid_this_month: boolean;
+    occurrences_in_range?: number;
 };
 
 export type UpcomingBill = Bill & {
@@ -45,4 +46,5 @@ export type Income = {
     is_active: boolean;
     notes: string | null;
     event_id: number | null;
+    occurrences_in_range?: number;
 };

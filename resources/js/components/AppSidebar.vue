@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3';
+import { BookUser, CalendarDays, ClipboardList, CookingPot, LayoutGrid, ListChecks, UtensilsCrossed, Users, Wallet } from 'lucide-vue-next';
 import { computed } from 'vue';
-import { BookOpen, BookUser, CalendarDays, ClipboardList, CookingPot, Folder, LayoutGrid, ListChecks, UtensilsCrossed, Users, Wallet } from 'lucide-vue-next';
 import NavFooter from '@/components/NavFooter.vue';
 import NavMain from '@/components/NavMain.vue';
 import NavUser from '@/components/NavUser.vue';
@@ -14,10 +14,10 @@ import {
     SidebarMenuButton,
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
+import { usePermissions } from '@/composables/usePermissions';
+import { index as calendarIndex } from '@/routes/calendar';
 import { type NavItem } from '@/types';
 import AppLogo from './AppLogo.vue';
-import { index as calendarIndex } from '@/routes/calendar';
-import { usePermissions } from '@/composables/usePermissions';
 
 const { can } = usePermissions();
 

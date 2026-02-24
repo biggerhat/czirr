@@ -1,21 +1,21 @@
 <script setup lang="ts">
 import { ref } from 'vue';
-import AppLayout from '@/layouts/AppLayout.vue';
-import { useCalendar } from '@/composables/useCalendar';
-import CalendarToolbar from '@/components/calendar/CalendarToolbar.vue';
-import CalendarMonthView from '@/components/calendar/CalendarMonthView.vue';
-import CalendarWeekView from '@/components/calendar/CalendarWeekView.vue';
-import CalendarDayView from '@/components/calendar/CalendarDayView.vue';
 import CalendarAgendaView from '@/components/calendar/CalendarAgendaView.vue';
-import CalendarEventModal from '@/components/calendar/CalendarEventModal.vue';
+import CalendarDayView from '@/components/calendar/CalendarDayView.vue';
 import CalendarEventDetail from '@/components/calendar/CalendarEventDetail.vue';
-import { toLocalDateString } from '@/lib/calendar';
-import type { FamilyMember, CalendarEvent, EditMode } from '@/types/calendar';
-import type { BudgetCategory } from '@/types/budgeting';
+import CalendarEventModal from '@/components/calendar/CalendarEventModal.vue';
 import type { EntryType } from '@/components/calendar/CalendarEventModal.vue';
+import CalendarMonthView from '@/components/calendar/CalendarMonthView.vue';
+import CalendarToolbar from '@/components/calendar/CalendarToolbar.vue';
+import CalendarWeekView from '@/components/calendar/CalendarWeekView.vue';
+import { useCalendar } from '@/composables/useCalendar';
+import AppLayout from '@/layouts/AppLayout.vue';
+import { toLocalDateString } from '@/lib/calendar';
 import type { BreadcrumbItem } from '@/types';
+import type { BudgetCategory } from '@/types/budgeting';
+import type { FamilyMember, CalendarEvent, EditMode } from '@/types/calendar';
 
-const props = defineProps<{
+defineProps<{
     familyMembers: FamilyMember[];
     budgetCategories: BudgetCategory[];
 }>();
@@ -44,7 +44,6 @@ const {
     openCreateModal,
     openEditModal,
     openEventDetail,
-    closeModals,
     loadEvents,
     onEventSaved,
     onEventDeleted,
@@ -81,7 +80,7 @@ function handleLogExpense(event: CalendarEvent) {
     }, 350);
 }
 
-function handleAddIncome(event: CalendarEvent) {
+function handleAddIncome() {
     showEventDetail.value = false;
     setTimeout(() => {
         defaultEntryType.value = 'income';
