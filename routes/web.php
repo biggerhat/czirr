@@ -11,6 +11,7 @@ use App\Http\Controllers\CookbookController;
 use App\Http\Controllers\CuisineController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EventController;
+use App\Http\Controllers\EventTypeController;
 use App\Http\Controllers\ExpenseController;
 use App\Http\Controllers\FamilyListController;
 use App\Http\Controllers\FamilyListItemController;
@@ -36,6 +37,9 @@ Route::middleware(['auth', 'verified', 'family'])->group(function () {
     Route::post('events', [EventController::class, 'store'])->middleware('permission:events.create')->name('events.store');
     Route::put('events/{event}', [EventController::class, 'update'])->middleware('permission:events.edit')->name('events.update');
     Route::delete('events/{event}', [EventController::class, 'destroy'])->middleware('permission:events.delete')->name('events.destroy');
+
+    // Event Types
+    Route::post('event-types', [EventTypeController::class, 'store'])->middleware('permission:events.create');
 
     // Lists
     Route::get('lists', [FamilyListController::class, 'index'])->name('lists.index');

@@ -1,20 +1,36 @@
 <script setup lang="ts">
-import { ChevronLeft, ChevronRight, Plus } from 'lucide-vue-next';
+import { ChevronLeft, ChevronRight, Filter, Plus } from 'lucide-vue-next';
+import { computed } from 'vue';
 import { Button } from '@/components/ui/button';
-import type { CalendarView } from '@/types/calendar';
+import {
+    DropdownMenu,
+    DropdownMenuCheckboxItem,
+    DropdownMenuContent,
+    DropdownMenuLabel,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import type { CalendarView, EventType } from '@/types/calendar';
 
-defineProps<{
+const props = defineProps<{
     title: string;
     view: CalendarView;
+    hiddenSources: Set<string>;
+    eventTypes: EventType[];
+    hiddenEventTypes: Set<number>;
 }>();
 
-defineEmits<{
+const emit = defineEmits<{
     prev: [];
     next: [];
     today: [];
     'update:view': [view: CalendarView];
     'new-event': [];
+    'toggle-source': [source: string];
+    'toggle-event-type': [id: number];
 }>();
+
+const hasActiveFilter = computed(() => props.hiddenSources.size > 0 || props.hiddenEventTypes.size > 0);
 
 const views: { label: string; value: CalendarView }[] = [
     { label: 'Month', value: 'month' },
@@ -57,6 +73,44 @@ const views: { label: string; value: CalendarView }[] = [
                         {{ v.label }}
                     </button>
                 </div>
+                <DropdownMenu>
+                    <DropdownMenuTrigger as-child>
+                        <Button variant="outline" size="icon" class="relative">
+                            <Filter class="h-4 w-4" />
+                            <span
+                                v-if="hasActiveFilter"
+                                class="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-primary"
+                            />
+                        </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" class="w-48">
+                        <DropdownMenuLabel>Show on calendar</DropdownMenuLabel>
+                        <DropdownMenuCheckboxItem
+                            :model-value="!hiddenSources.has('bill')"
+                            @update:model-value="emit('toggle-source', 'bill')"
+                        >
+                            Bills
+                        </DropdownMenuCheckboxItem>
+                        <DropdownMenuCheckboxItem
+                            :model-value="!hiddenSources.has('income')"
+                            @update:model-value="emit('toggle-source', 'income')"
+                        >
+                            Income
+                        </DropdownMenuCheckboxItem>
+                        <template v-if="eventTypes.length > 0">
+                            <DropdownMenuSeparator />
+                            <DropdownMenuLabel>Event types</DropdownMenuLabel>
+                            <DropdownMenuCheckboxItem
+                                v-for="et in eventTypes"
+                                :key="et.id"
+                                :model-value="!hiddenEventTypes.has(et.id)"
+                                @update:model-value="emit('toggle-event-type', et.id)"
+                            >
+                                {{ et.name }}
+                            </DropdownMenuCheckboxItem>
+                        </template>
+                    </DropdownMenuContent>
+                </DropdownMenu>
                 <Button size="sm" @click="$emit('new-event')">
                     <Plus class="h-4 w-4 sm:mr-1" />
                     <span class="hidden sm:inline">New Event</span>

@@ -2,12 +2,49 @@ import { ref, computed, watch } from 'vue';
 import { toLocalDateString } from '@/lib/calendar';
 import type { CalendarEvent, CalendarView, EditMode } from '@/types/calendar';
 
+const HIDDEN_SOURCES_KEY = 'calendar-hidden-sources';
+const HIDDEN_EVENT_TYPES_KEY = 'calendar-hidden-event-types';
+
+function loadHiddenSources(): Set<string> {
+    try {
+        const stored = localStorage.getItem(HIDDEN_SOURCES_KEY);
+        return stored ? new Set(JSON.parse(stored)) : new Set();
+    } catch {
+        return new Set();
+    }
+}
+
+function loadHiddenEventTypes(): Set<number> {
+    try {
+        const stored = localStorage.getItem(HIDDEN_EVENT_TYPES_KEY);
+        return stored ? new Set(JSON.parse(stored)) : new Set();
+    } catch {
+        return new Set();
+    }
+}
+
 export function useCalendar() {
     const view = ref<CalendarView>('month');
     const currentDate = ref(new Date());
     const events = ref<CalendarEvent[]>([]);
     const isLoading = ref(false);
     const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    const hiddenSources = ref<Set<string>>(loadHiddenSources());
+    const hiddenEventTypes = ref<Set<number>>(loadHiddenEventTypes());
+
+    function toggleSource(source: string) {
+        const next = new Set(hiddenSources.value);
+        if (next.has(source)) { next.delete(source); } else { next.add(source); }
+        hiddenSources.value = next;
+        localStorage.setItem(HIDDEN_SOURCES_KEY, JSON.stringify([...next]));
+    }
+
+    function toggleEventType(id: number) {
+        const next = new Set(hiddenEventTypes.value);
+        if (next.has(id)) { next.delete(id); } else { next.add(id); }
+        hiddenEventTypes.value = next;
+        localStorage.setItem(HIDDEN_EVENT_TYPES_KEY, JSON.stringify([...next]));
+    }
 
     // Modal states
     const showEventModal = ref(false);
@@ -72,6 +109,8 @@ export function useCalendar() {
     const eventsByDate = computed(() => {
         const map = new Map<string, CalendarEvent[]>();
         for (const event of events.value) {
+            if (event.source && hiddenSources.value.has(event.source)) continue;
+            if (event.event_type_id && hiddenEventTypes.value.has(event.event_type_id)) continue;
             const start = new Date(event.starts_at);
             const end = new Date(event.ends_at);
 
@@ -244,5 +283,9 @@ export function useCalendar() {
         loadEvents,
         onEventSaved,
         onEventDeleted,
+        hiddenSources,
+        toggleSource,
+        hiddenEventTypes,
+        toggleEventType,
     };
 }

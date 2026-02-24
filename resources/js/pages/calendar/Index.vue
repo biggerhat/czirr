@@ -13,11 +13,12 @@ import AppLayout from '@/layouts/AppLayout.vue';
 import { toLocalDateString } from '@/lib/calendar';
 import type { BreadcrumbItem } from '@/types';
 import type { BudgetCategory } from '@/types/budgeting';
-import type { FamilyMember, CalendarEvent, EditMode } from '@/types/calendar';
+import type { FamilyMember, CalendarEvent, EditMode, EventType } from '@/types/calendar';
 
 defineProps<{
     familyMembers: FamilyMember[];
     budgetCategories: BudgetCategory[];
+    eventTypes: EventType[];
 }>();
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -47,6 +48,10 @@ const {
     loadEvents,
     onEventSaved,
     onEventDeleted,
+    hiddenSources,
+    toggleSource,
+    hiddenEventTypes,
+    toggleEventType,
 } = useCalendar();
 
 const defaultEntryType = ref<EntryType>('event');
@@ -102,11 +107,16 @@ function handleBudgetSaved() {
             <CalendarToolbar
                 :title="calendarTitle"
                 :view="view"
+                :hidden-sources="hiddenSources"
+                :event-types="eventTypes"
+                :hidden-event-types="hiddenEventTypes"
                 @prev="goPrev"
                 @next="goNext"
                 @today="goToday"
                 @update:view="view = $event"
                 @new-event="handleNewEvent"
+                @toggle-source="toggleSource"
+                @toggle-event-type="toggleEventType"
             />
 
             <div v-if="isLoading" class="flex items-center justify-center py-12">
@@ -156,6 +166,7 @@ function handleBudgetSaved() {
                 :timezone="timezone"
                 :family-members="familyMembers"
                 :categories="budgetCategories"
+                :event-types="eventTypes"
                 :default-date="defaultDate"
                 :default-entry-type="defaultEntryType"
                 :edit-mode="editMode"

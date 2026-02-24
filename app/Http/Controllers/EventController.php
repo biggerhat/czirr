@@ -31,7 +31,7 @@ class EventController extends Controller
         };
 
         // 1. Non-recurring, non-exception events in range (existing behavior)
-        $regularEvents = Event::with(['owner:id,name,email', 'attendees:id,name,email', 'familyMembers'])
+        $regularEvents = Event::with(['owner:id,name,email', 'attendees:id,name,email', 'familyMembers', 'eventType:id,name'])
             ->nonRecurring()
             ->where($userScope)
             ->where('starts_at', '<=', $end)
@@ -40,7 +40,7 @@ class EventController extends Controller
             ->get();
 
         // 2. Recurring masters where starts_at <= range_end
-        $masters = Event::with(['owner:id,name,email', 'attendees:id,name,email', 'familyMembers'])
+        $masters = Event::with(['owner:id,name,email', 'attendees:id,name,email', 'familyMembers', 'eventType:id,name'])
             ->recurring()
             ->where($userScope)
             ->where('starts_at', '<=', $end)
@@ -50,7 +50,7 @@ class EventController extends Controller
         $occurrences = $this->recurringService->expandEventsForRange($masters, $start, $end, $timezone);
 
         // 4. Exception instances in range
-        $exceptions = Event::with(['owner:id,name,email', 'attendees:id,name,email', 'familyMembers'])
+        $exceptions = Event::with(['owner:id,name,email', 'attendees:id,name,email', 'familyMembers', 'eventType:id,name'])
             ->exceptions()
             ->where($userScope)
             ->where('starts_at', '<=', $end)
@@ -82,13 +82,13 @@ class EventController extends Controller
 
         /** @var Event $event */
         $event = $request->user()->events()->create($request->safe()->only([
-            'title', 'description', 'starts_at', 'ends_at', 'is_all_day', 'rrule',
+            'title', 'description', 'starts_at', 'ends_at', 'is_all_day', 'rrule', 'event_type_id',
         ]));
 
         $event->attendees()->sync($validated['attendee_ids'] ?? []);
         $event->familyMembers()->sync($validated['family_member_ids'] ?? []);
 
-        $event->load(['owner:id,name,email', 'attendees:id,name,email', 'familyMembers']);
+        $event->load(['owner:id,name,email', 'attendees:id,name,email', 'familyMembers', 'eventType:id,name']);
 
         return response()->json($event, 201);
     }
@@ -100,7 +100,7 @@ class EventController extends Controller
         $occurrenceStart = $validated['occurrence_start'] ?? null;
 
         $data = $request->safe()->only([
-            'title', 'description', 'starts_at', 'ends_at', 'is_all_day', 'rrule',
+            'title', 'description', 'starts_at', 'ends_at', 'is_all_day', 'rrule', 'event_type_id',
         ]);
 
         $familyMemberIds = $validated['family_member_ids'] ?? [];
@@ -109,7 +109,7 @@ class EventController extends Controller
             if ($editMode === 'single') {
                 $result = $this->recurringService->editSingleOccurrence($event, $occurrenceStart, $data);
                 $result->familyMembers()->sync($familyMemberIds);
-                $result->load(['owner:id,name,email', 'attendees:id,name,email', 'familyMembers']);
+                $result->load(['owner:id,name,email', 'attendees:id,name,email', 'familyMembers', 'eventType:id,name']);
 
                 return response()->json($result);
             }
@@ -118,7 +118,7 @@ class EventController extends Controller
                 $timezone = $request->input('timezone', 'UTC');
                 $result = $this->recurringService->editThisAndFuture($event, $occurrenceStart, $data, $timezone);
                 $result->familyMembers()->sync($familyMemberIds);
-                $result->load(['owner:id,name,email', 'attendees:id,name,email', 'familyMembers']);
+                $result->load(['owner:id,name,email', 'attendees:id,name,email', 'familyMembers', 'eventType:id,name']);
 
                 return response()->json($result);
             }
@@ -132,7 +132,7 @@ class EventController extends Controller
         }
         $event->familyMembers()->sync($familyMemberIds);
 
-        $event->load(['owner:id,name,email', 'attendees:id,name,email', 'familyMembers']);
+        $event->load(['owner:id,name,email', 'attendees:id,name,email', 'familyMembers', 'eventType:id,name']);
 
         return response()->json($event);
     }

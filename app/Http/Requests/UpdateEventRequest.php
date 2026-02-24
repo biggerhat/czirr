@@ -42,6 +42,7 @@ class UpdateEventRequest extends FormRequest
             'family_member_ids' => ['nullable', 'array'],
             'family_member_ids.*' => ['integer', 'exists:family_members,id'],
             'rrule' => ['nullable', 'string', 'max:1000'],
+            'event_type_id' => ['nullable', 'integer', 'exists:event_types,id'],
             'edit_mode' => ['nullable', 'string', 'in:single,future,all'],
             'occurrence_start' => ['nullable', 'string'],
         ];

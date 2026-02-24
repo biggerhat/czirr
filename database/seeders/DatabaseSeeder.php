@@ -26,6 +26,7 @@ class DatabaseSeeder extends Seeder
     {
         $this->call([
             RoleAndPermissionSeeder::class,
+            EventTypeSeeder::class,
             CuisineSeeder::class,
             RecipeTagSeeder::class,
         ]);
