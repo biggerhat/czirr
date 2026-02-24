@@ -88,6 +88,22 @@ export function useCalendar() {
         return { start, end };
     });
 
+    // Fetch range always covers the full month (6-week grid) so that
+    // switching between month/week/day reuses cached data without re-fetching.
+    const fetchRange = computed(() => {
+        const d = currentDate.value;
+        const firstOfMonth = new Date(d.getFullYear(), d.getMonth(), 1);
+        const start = new Date(firstOfMonth);
+        start.setDate(start.getDate() - start.getDay());
+        const end = new Date(start);
+        end.setDate(end.getDate() + 41);
+
+        start.setHours(0, 0, 0, 0);
+        end.setHours(23, 59, 59, 999);
+
+        return { start, end };
+    });
+
     const calendarTitle = computed(() => {
         const d = currentDate.value;
         if (view.value === 'month') {
@@ -207,7 +223,7 @@ export function useCalendar() {
     async function loadEvents() {
         isLoading.value = true;
         try {
-            const { start, end } = visibleRange.value;
+            const { start, end } = fetchRange.value;
             const params = new URLSearchParams({
                 start: start.toISOString(),
                 end: end.toISOString(),
@@ -272,11 +288,13 @@ export function useCalendar() {
         closeModals();
     }
 
-    // Auto-load events when visible range changes (skip if boundaries unchanged)
+    // Auto-load events when fetch range changes (skip if boundaries unchanged).
+    // fetchRange is always the full month, so switching views within the same
+    // month won't trigger a re-fetch.
     let lastFetchedRange = { start: '', end: '' };
 
-    watch(visibleRange, () => {
-        const { start, end } = visibleRange.value;
+    watch(fetchRange, () => {
+        const { start, end } = fetchRange.value;
         const startStr = start.toISOString();
         const endStr = end.toISOString();
         if (startStr === lastFetchedRange.start && endStr === lastFetchedRange.end) return;
