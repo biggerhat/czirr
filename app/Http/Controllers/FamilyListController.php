@@ -127,7 +127,7 @@ class FamilyListController extends Controller
         $user = $request->user();
 
         // Find if this user is a linked family member
-        $linkedMember = FamilyMember::where('linked_user_id', $user->id)->first();
+        $linkedMember = $user->linkedFamilyMember();
 
         if (! $linkedMember) {
             // User is a family owner — only see their own lists
@@ -203,18 +203,8 @@ class FamilyListController extends Controller
     private function getFamilyMembers(Request $request)
     {
         $user = $request->user();
+        $ownerId = $user->familyOwnerId();
 
-        // If user owns family members, return those
-        if ($user->familyMembers()->exists()) {
-            return $user->familyMembers()->orderBy('name')->get();
-        }
-
-        // If user is a linked member, return the family owner's members
-        $linkedMember = FamilyMember::where('linked_user_id', $user->id)->first();
-        if ($linkedMember) {
-            return FamilyMember::where('user_id', $linkedMember->user_id)->orderBy('name')->get();
-        }
-
-        return collect();
+        return FamilyMember::where('user_id', $ownerId)->orderBy('name')->get();
     }
 }

@@ -14,13 +14,7 @@ class ChoreController extends Controller
     public function index(Request $request): Response
     {
         $user = $request->user();
-        $ownerId = $user->id;
-
-        // If user is a linked family member, show the family owner's chores
-        $linkedMember = FamilyMember::where('linked_user_id', $user->id)->first();
-        if ($linkedMember) {
-            $ownerId = $linkedMember->user_id;
-        }
+        $ownerId = $user->familyOwnerId();
 
         $chores = Chore::where('user_id', $ownerId)
             ->with('assignments.familyMember')
@@ -30,8 +24,6 @@ class ChoreController extends Controller
         $familyMembers = FamilyMember::where('user_id', $ownerId)
             ->orderBy('name')
             ->get();
-
-        $user = $request->user();
 
         return Inertia::render('chores/Index', [
             'chores' => $chores,

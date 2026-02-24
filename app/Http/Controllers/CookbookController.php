@@ -155,7 +155,7 @@ class CookbookController extends Controller
     {
         $user = $request->user();
 
-        $linkedMember = FamilyMember::where('linked_user_id', $user->id)->first();
+        $linkedMember = $user->linkedFamilyMember();
 
         if (! $linkedMember) {
             return $user->cookbooks();
@@ -225,25 +225,15 @@ class CookbookController extends Controller
     private function getFamilyMembers(Request $request)
     {
         $user = $request->user();
+        $ownerId = $user->familyOwnerId();
 
-        if ($user->familyMembers()->exists()) {
-            return $user->familyMembers()->orderBy('name')->get();
-        }
-
-        $linkedMember = FamilyMember::where('linked_user_id', $user->id)->first();
-        if ($linkedMember) {
-            return FamilyMember::where('user_id', $linkedMember->user_id)->orderBy('name')->get();
-        }
-
-        return collect();
+        return FamilyMember::where('user_id', $ownerId)->orderBy('name')->get();
     }
 
     private function getAllRecipes(Request $request)
     {
         $user = $request->user();
-
-        $linkedMember = FamilyMember::where('linked_user_id', $user->id)->first();
-        $ownerId = $linkedMember ? $linkedMember->user_id : $user->id;
+        $ownerId = $user->familyOwnerId();
 
         return Recipe::where('user_id', $ownerId)->orderBy('name')->get();
     }

@@ -1,7 +1,7 @@
 import type { Weekday } from 'rrule';
 import { RRule } from 'rrule';
 
-export type RecurrenceFrequency = 'none' | 'daily' | 'weekly' | 'monthly' | 'yearly';
+export type RecurrenceFrequency = 'none' | 'daily' | 'weekday' | 'weekly' | 'monthly' | 'yearly';
 export type RecurrenceEndType = 'never' | 'until' | 'count';
 
 export type RecurrenceConfig = {
@@ -45,12 +45,16 @@ const WEEKDAY_OBJECTS: Weekday[] = [
 export function buildRRuleString(config: RecurrenceConfig): string | null {
     if (config.frequency === 'none') return null;
 
+    const isWeekday = config.frequency === 'weekday';
+
     const options: Partial<ConstructorParameters<typeof RRule>[0]> = {
-        freq: FREQ_MAP[config.frequency],
-        interval: config.interval,
+        freq: isWeekday ? RRule.WEEKLY : FREQ_MAP[config.frequency],
+        interval: isWeekday ? 1 : config.interval,
     };
 
-    if (config.frequency === 'weekly' && config.byWeekday.length > 0) {
+    if (isWeekday) {
+        options.byweekday = [RRule.MO, RRule.TU, RRule.WE, RRule.TH, RRule.FR];
+    } else if (config.frequency === 'weekly' && config.byWeekday.length > 0) {
         options.byweekday = config.byWeekday.map(d => WEEKDAY_OBJECTS[d]);
     }
 
@@ -94,6 +98,18 @@ export function parseRRuleString(rrule: string | null | undefined): RecurrenceCo
                 }
                 return (d as Weekday).weekday;
             });
+
+            // Detect "every weekday" pattern: weekly, interval 1, exactly Mon-Fri
+            const sorted = [...config.byWeekday].sort((a, b) => a - b);
+            if (
+                config.frequency === 'weekly' &&
+                config.interval === 1 &&
+                sorted.length === 5 &&
+                sorted[0] === 0 && sorted[1] === 1 && sorted[2] === 2 && sorted[3] === 3 && sorted[4] === 4
+            ) {
+                config.frequency = 'weekday';
+                config.byWeekday = [];
+            }
         }
 
         if (opts.until) {
@@ -127,6 +143,16 @@ export function humanReadableRRule(rrule: string | null | undefined): string {
 
     const config = parseRRuleString(rrule);
     if (config.frequency === 'none') return '';
+
+    if (config.frequency === 'weekday') {
+        let text = 'Every weekday';
+        if (config.endType === 'until' && config.untilDate) {
+            text += ` until ${config.untilDate}`;
+        } else if (config.endType === 'count' && config.count) {
+            text += `, ${config.count} times`;
+        }
+        return text;
+    }
 
     const unit = FREQ_LABELS[config.frequency] ?? config.frequency;
     let text = config.interval === 1
