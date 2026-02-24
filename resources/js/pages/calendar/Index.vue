@@ -103,7 +103,7 @@ function handleBudgetSaved() {
 
 <template>
     <AppLayout :breadcrumbs="breadcrumbs">
-        <div class="flex h-full flex-1 flex-col gap-4 p-4">
+        <div class="flex h-full flex-1 flex-col gap-4 p-2 sm:p-4">
             <CalendarToolbar
                 :title="calendarTitle"
                 :view="view"

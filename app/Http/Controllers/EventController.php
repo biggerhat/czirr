@@ -9,6 +9,8 @@ use App\Services\RecurringEventService;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 
 class EventController extends Controller
@@ -25,55 +27,65 @@ class EventController extends Controller
 
         $userId = $request->user()->id;
 
-        $userScope = function ($query) use ($userId) {
-            $query->where('user_id', $userId)
-                ->orWhereHas('attendees', fn ($q) => $q->where('users.id', $userId));
-        };
+        $version = Cache::get("calendar:v:{$userId}", 0);
+        $cacheKey = "calendar:{$userId}:{$version}:".md5("{$start->timestamp}:{$end->timestamp}");
 
-        // 1. Non-recurring, non-exception events in range (existing behavior)
-        $regularEvents = Event::with(['owner:id,name,email', 'attendees:id,name,email', 'familyMembers:id,name,nickname,color', 'eventType:id,name'])
-            ->nonRecurring()
-            ->where($userScope)
-            ->where('starts_at', '<=', $end)
-            ->where('ends_at', '>=', $start)
-            ->orderBy('starts_at')
-            ->get();
+        $data = Cache::remember($cacheKey, now()->addMinutes(5), function () use ($userId, $start, $end, $timezone) {
+            // Pre-fetch attended event IDs to avoid repeated correlated subqueries
+            $attendeeEventIds = DB::table('event_attendees')
+                ->where('user_id', $userId)
+                ->pluck('event_id');
 
-        // 2. Recurring masters where starts_at <= range_end
-        $masters = Event::with(['owner:id,name,email', 'attendees:id,name,email', 'familyMembers:id,name,nickname,color', 'eventType:id,name'])
-            ->recurring()
-            ->where($userScope)
-            ->where('starts_at', '<=', $end)
-            ->get();
+            // Single query: all relevant events (regular + recurring masters + exceptions)
+            // - Regular/exceptions: starts_at <= end AND ends_at >= start
+            // - Recurring masters: starts_at <= end (no end filter — occurrences may extend beyond)
+            $allUserEvents = Event::with(['owner:id,name,email', 'attendees:id,name,email', 'familyMembers:id,name,nickname,color', 'eventType:id,name'])
+                ->where(function ($query) use ($userId, $attendeeEventIds) {
+                    $query->where('user_id', $userId);
+                    if ($attendeeEventIds->isNotEmpty()) {
+                        $query->orWhereIn('id', $attendeeEventIds);
+                    }
+                })
+                ->where('starts_at', '<=', $end)
+                ->where(function ($query) use ($start) {
+                    $query->where('ends_at', '>=', $start)
+                        ->orWhereNotNull('rrule');
+                })
+                ->orderBy('starts_at')
+                ->get();
 
-        // 3. Expand masters into virtual occurrences
-        $occurrences = $this->recurringService->expandEventsForRange($masters, $start, $end, $timezone);
+            // Partition into regular events, recurring masters, and exceptions
+            $regularEvents = [];
+            $masters = collect();
+            $exceptions = [];
 
-        // 4. Exception instances in range
-        $exceptions = Event::with(['owner:id,name,email', 'attendees:id,name,email', 'familyMembers:id,name,nickname,color', 'eventType:id,name'])
-            ->exceptions()
-            ->where($userScope)
-            ->where('starts_at', '<=', $end)
-            ->where('ends_at', '>=', $start)
-            ->orderBy('starts_at')
-            ->get()
-            ->map(function (Event $event) {
-                $event->setAttribute('is_occurrence', true);
-                $event->setAttribute('is_exception', true);
-                $event->setAttribute('master_event_id', $event->recurring_event_id);
-                $event->setAttribute('occurrence_start', $event->original_start?->toIso8601String());
+            foreach ($allUserEvents as $event) {
+                if ($event->isRecurring()) {
+                    $masters->push($event);
+                } elseif ($event->isException()) {
+                    $event->setAttribute('is_occurrence', true);
+                    $event->setAttribute('is_exception', true);
+                    $event->setAttribute('master_event_id', $event->recurring_event_id);
+                    $event->setAttribute('occurrence_start', $event->original_start?->toIso8601String());
+                    $exceptions[] = $event;
+                } else {
+                    $regularEvents[] = $event;
+                }
+            }
 
-                return $event;
-            });
+            // Expand recurring masters into virtual occurrences
+            $occurrences = $this->recurringService->expandEventsForRange($masters, $start, $end, $timezone);
 
-        // 5. Merge and sort by starts_at
-        $allEvents = collect($regularEvents)
-            ->concat($occurrences)
-            ->concat($exceptions)
-            ->sortBy('starts_at')
-            ->values();
+            // Merge and sort
+            return collect($regularEvents)
+                ->concat($occurrences)
+                ->concat($exceptions)
+                ->sortBy('starts_at')
+                ->values()
+                ->toArray();
+        });
 
-        return response()->json($allEvents);
+        return response()->json($data);
     }
 
     public function store(StoreEventRequest $request): JsonResponse
