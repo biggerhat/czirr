@@ -26,7 +26,7 @@ class RecurringEventService
                 continue;
             }
 
-            $exceptions = $master->recurrence_exceptions ?? [];
+            $exceptions = array_flip($master->recurrence_exceptions ?? []);
             $duration = $master->getDuration();
 
             try {
@@ -45,7 +45,7 @@ class RecurringEventService
                     $occStartStr = $occStart->toIso8601String();
 
                     // Skip excluded dates
-                    if (in_array($occStartStr, $exceptions)) {
+                    if (isset($exceptions[$occStartStr])) {
                         continue;
                     }
 
