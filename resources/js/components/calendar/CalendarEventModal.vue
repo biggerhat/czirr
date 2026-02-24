@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { router } from '@inertiajs/vue3';
 import { CalendarDays, FileText, DollarSign, Receipt, Check, Plus } from 'lucide-vue-next';
 import { ref, computed, watch, nextTick } from 'vue';
 import RecurrenceEditor from '@/components/calendar/RecurrenceEditor.vue';
@@ -6,11 +7,6 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import {
-    Popover,
-    PopoverContent,
-    PopoverTrigger,
-} from '@/components/ui/popover';
 import {
     Select,
     SelectContent,
@@ -265,6 +261,9 @@ async function createEventType() {
             eventTypeId.value = String(created.id);
             newTypeName.value = '';
             showTypeCreate.value = false;
+
+            // Refresh the page-level eventTypes prop so the toolbar filter updates
+            router.reload({ only: ['eventTypes'], preserveState: true, preserveScroll: true });
         }
     } finally {
         isCreatingType.value = false;
@@ -479,22 +478,20 @@ async function save() {
                                         </SelectItem>
                                     </SelectContent>
                                 </Select>
-                                <Popover v-model:open="showTypeCreate">
-                                    <PopoverTrigger as-child>
-                                        <Button type="button" variant="outline" size="icon" class="shrink-0">
-                                            <Plus class="h-4 w-4" />
-                                        </Button>
-                                    </PopoverTrigger>
-                                    <PopoverContent class="w-64 p-3">
-                                        <form @submit.prevent="createEventType" class="flex flex-col gap-2">
-                                            <Label class="text-sm">New Event Type</Label>
-                                            <Input v-model="newTypeName" placeholder="e.g. Meetings" class="h-8 text-sm" />
-                                            <Button type="submit" size="sm" :disabled="isCreatingType || !newTypeName.trim()">
-                                                {{ isCreatingType ? 'Adding...' : 'Add' }}
-                                            </Button>
-                                        </form>
-                                    </PopoverContent>
-                                </Popover>
+                                <Button type="button" variant="outline" size="icon" class="shrink-0" @click="showTypeCreate = !showTypeCreate">
+                                    <Plus class="h-4 w-4" />
+                                </Button>
+                            </div>
+                            <div v-if="showTypeCreate" class="flex items-center gap-2">
+                                <Input
+                                    v-model="newTypeName"
+                                    placeholder="e.g. Meetings"
+                                    class="h-8 text-sm flex-1"
+                                    @keydown.enter.prevent="createEventType"
+                                />
+                                <Button type="button" size="sm" :disabled="isCreatingType || !newTypeName.trim()" @click="createEventType">
+                                    {{ isCreatingType ? 'Adding...' : 'Add' }}
+                                </Button>
                             </div>
                         </div>
 
