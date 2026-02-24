@@ -31,6 +31,7 @@ class Event extends Model
         'original_start',
         'recurrence_exceptions',
         'source',
+        'event_type_id',
     ];
 
     protected function casts(): array
@@ -52,6 +53,11 @@ class Event extends Model
     public function contact(): BelongsTo
     {
         return $this->belongsTo(Contact::class);
+    }
+
+    public function eventType(): BelongsTo
+    {
+        return $this->belongsTo(EventType::class);
     }
 
     public function attendees(): BelongsToMany

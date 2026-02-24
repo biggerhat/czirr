@@ -1,5 +1,10 @@
 export type CalendarView = 'month' | 'week' | 'day' | 'agenda';
 
+export type EventType = {
+    id: number;
+    name: string;
+};
+
 export type EventColor = 'rose' | 'orange' | 'amber' | 'emerald' | 'cyan' | 'blue' | 'violet' | 'pink';
 
 export type EventAttendee = {
@@ -36,6 +41,8 @@ export type CalendarEvent = {
     is_all_day: boolean;
     rrule?: string | null;
     source?: 'bill' | 'income' | null;
+    event_type_id?: number | null;
+    event_type?: EventType | null;
     is_occurrence?: boolean;
     is_exception?: boolean;
     master_event_id?: number;

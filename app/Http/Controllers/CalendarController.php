@@ -2,7 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\EventType;
 use App\Services\BudgetService;
+use Database\Seeders\EventTypeSeeder;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -19,6 +21,16 @@ class CalendarController extends Controller
 
         $this->budgetService->seedDefaultCategories($user);
 
+        // Seed default event types if none exist yet
+        if (! EventType::whereNull('user_id')->exists()) {
+            (new EventTypeSeeder)->run();
+        }
+
+        $eventTypes = EventType::availableTo($user->id)
+            ->orderBy('sort_order')
+            ->orderBy('name')
+            ->get(['id', 'name']);
+
         $familyMembers = $user->familyMembers()
             ->select('id', 'user_id', 'name', 'color')
             ->orderBy('name')
@@ -32,6 +44,7 @@ class CalendarController extends Controller
         return Inertia::render('calendar/Index', [
             'familyMembers' => $familyMembers,
             'budgetCategories' => $budgetCategories,
+            'eventTypes' => $eventTypes,
         ]);
     }
 }

@@ -61,6 +61,8 @@ class RecurringEventService
                         'is_all_day' => $master->is_all_day,
                         'rrule' => $master->rrule,
                         'source' => $master->source,
+                        'event_type_id' => $master->event_type_id,
+                        'event_type' => $master->eventType,
                         'is_occurrence' => true,
                         'is_exception' => false,
                         'master_event_id' => $master->id,

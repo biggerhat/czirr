@@ -1,11 +1,16 @@
 <script setup lang="ts">
-import { CalendarDays, FileText, DollarSign, Receipt, Check } from 'lucide-vue-next';
+import { CalendarDays, FileText, DollarSign, Receipt, Check, Plus } from 'lucide-vue-next';
 import { ref, computed, watch, nextTick } from 'vue';
 import RecurrenceEditor from '@/components/calendar/RecurrenceEditor.vue';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import {
+    Popover,
+    PopoverContent,
+    PopoverTrigger,
+} from '@/components/ui/popover';
 import {
     Select,
     SelectContent,
@@ -25,7 +30,7 @@ import { EVENT_COLORS, toLocalDateString } from '@/lib/calendar';
 import type { RecurrenceConfig } from '@/lib/recurrence';
 import { defaultRecurrenceConfig, buildRRuleString, parseRRuleString } from '@/lib/recurrence';
 import type { BudgetCategory } from '@/types/budgeting';
-import type { CalendarEvent, EditMode, FamilyMember } from '@/types/calendar';
+import type { CalendarEvent, EditMode, EventType, FamilyMember } from '@/types/calendar';
 
 export type EntryType = 'event' | 'bill' | 'expense' | 'income';
 
@@ -35,6 +40,7 @@ const props = defineProps<{
     timezone: string;
     familyMembers: FamilyMember[];
     categories: BudgetCategory[];
+    eventTypes: EventType[];
     defaultDate: string | null;
     defaultEntryType: EntryType;
     editMode: EditMode | null;
@@ -62,6 +68,11 @@ const endTime = ref('10:00');
 const isAllDay = ref(false);
 const familyMemberIds = ref<number[]>([]);
 const recurrenceConfig = ref<RecurrenceConfig>(defaultRecurrenceConfig());
+const eventTypeId = ref('none');
+const allEventTypes = ref<EventType[]>([]);
+const newTypeName = ref('');
+const isCreatingType = ref(false);
+const showTypeCreate = ref(false);
 
 // --- Budget shared fields ---
 const budgetName = ref('');
@@ -159,6 +170,8 @@ watch(() => props.open, (open) => {
     // Set entry type
     entryType.value = isEditing.value ? 'event' : props.defaultEntryType;
 
+    allEventTypes.value = [...props.eventTypes];
+
     if (props.event) {
         // Editing an existing event
         title.value = props.event.title;
@@ -166,6 +179,7 @@ watch(() => props.open, (open) => {
         isAllDay.value = props.event.is_all_day;
         familyMemberIds.value = (props.event.family_members ?? []).map(fm => fm.id);
         recurrenceConfig.value = parseRRuleString(props.event.rrule);
+        eventTypeId.value = props.event.event_type_id ? String(props.event.event_type_id) : 'none';
 
         const start = new Date(props.event.starts_at);
         const end = new Date(props.event.ends_at);
@@ -189,6 +203,7 @@ watch(() => props.open, (open) => {
         isAllDay.value = false;
         familyMemberIds.value = [];
         recurrenceConfig.value = defaultRecurrenceConfig();
+        eventTypeId.value = 'none';
 
         // Budget defaults
         budgetName.value = '';
@@ -234,6 +249,28 @@ function getHeaders() {
     };
 }
 
+async function createEventType() {
+    if (!newTypeName.value.trim()) return;
+    isCreatingType.value = true;
+    try {
+        const response = await fetch('/event-types', {
+            method: 'POST',
+            headers: getHeaders(),
+            body: JSON.stringify({ name: newTypeName.value.trim() }),
+        });
+        if (response.ok) {
+            const created: EventType = await response.json();
+            allEventTypes.value.push(created);
+            allEventTypes.value.sort((a, b) => a.name.localeCompare(b.name));
+            eventTypeId.value = String(created.id);
+            newTypeName.value = '';
+            showTypeCreate.value = false;
+        }
+    } finally {
+        isCreatingType.value = false;
+    }
+}
+
 async function saveEvent() {
     const rrule = showRecurrenceEditor.value ? buildRRuleString(recurrenceConfig.value) : null;
     const isRecurring = !!rrule || !!props.event?.rrule || !!props.event?.is_occurrence;
@@ -249,6 +286,7 @@ async function saveEvent() {
         family_member_ids: familyMemberIds.value,
         timezone: props.timezone,
         rrule,
+        event_type_id: eventTypeId.value !== 'none' ? parseInt(eventTypeId.value) : null,
     };
 
     if (props.editMode) {
@@ -421,6 +459,43 @@ async function save() {
                         <div class="space-y-2">
                             <Label for="description">Description</Label>
                             <Textarea id="description" v-model="description" placeholder="Optional description" rows="2" />
+                        </div>
+
+                        <div class="space-y-2">
+                            <Label>Event Type</Label>
+                            <div class="flex items-center gap-2">
+                                <Select v-model="eventTypeId">
+                                    <SelectTrigger class="flex-1">
+                                        <SelectValue placeholder="None" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="none">None</SelectItem>
+                                        <SelectItem
+                                            v-for="et in allEventTypes"
+                                            :key="et.id"
+                                            :value="String(et.id)"
+                                        >
+                                            {{ et.name }}
+                                        </SelectItem>
+                                    </SelectContent>
+                                </Select>
+                                <Popover v-model:open="showTypeCreate">
+                                    <PopoverTrigger as-child>
+                                        <Button type="button" variant="outline" size="icon" class="shrink-0">
+                                            <Plus class="h-4 w-4" />
+                                        </Button>
+                                    </PopoverTrigger>
+                                    <PopoverContent class="w-64 p-3">
+                                        <form @submit.prevent="createEventType" class="flex flex-col gap-2">
+                                            <Label class="text-sm">New Event Type</Label>
+                                            <Input v-model="newTypeName" placeholder="e.g. Meetings" class="h-8 text-sm" />
+                                            <Button type="submit" size="sm" :disabled="isCreatingType || !newTypeName.trim()">
+                                                {{ isCreatingType ? 'Adding...' : 'Add' }}
+                                            </Button>
+                                        </form>
+                                    </PopoverContent>
+                                </Popover>
+                            </div>
                         </div>
 
                         <div class="flex items-center gap-2">
