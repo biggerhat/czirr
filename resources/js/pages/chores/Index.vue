@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { router } from '@inertiajs/vue3';
-import { CalendarDays, ChevronLeft, ChevronRight, Grid3X3, Pencil, Plus, Printer, Trash2 } from 'lucide-vue-next';
+import { CalendarDays, Check, ChevronLeft, ChevronRight, Grid3X3, Pencil, Plus, Printer, Trash2 } from 'lucide-vue-next';
 import { ref, computed } from 'vue';
 import CellPicker from '@/components/chores/CellPicker.vue';
 import ChoreModal from '@/components/chores/ChoreModal.vue';
@@ -108,6 +108,42 @@ function openDetail(entry: DayChoreEntry, day: DayOfWeek) {
 }
 
 const activeChores = computed(() => props.chores.filter(c => c.is_active));
+
+// Detail dialog: computed set of assigned member IDs for the current detail entry
+const detailAssignedIds = computed(() => {
+    if (!detailEntry.value) return new Set<number>();
+    return new Set(detailEntry.value.members.map(m => m.id));
+});
+
+const isTogglingAssignment = ref(false);
+
+async function toggleAssignmentFromDetail(choreId: number, familyMemberId: number, day: DayOfWeek) {
+    isTogglingAssignment.value = true;
+    await toggleAssignment(choreId, familyMemberId, day);
+    isTogglingAssignment.value = false;
+
+    // Update the detail entry in-place after reload
+    const chore = props.chores.find(c => c.id === choreId);
+    if (chore && detailEntry.value) {
+        const dayAssignments = chore.assignments.filter(a => a.day_of_week === day);
+        detailEntry.value = {
+            chore,
+            members: dayAssignments.map(a => a.family_member),
+        };
+    }
+}
+
+function editFromDetail() {
+    if (!detailEntry.value) return;
+    showDetailDialog.value = false;
+    openEditChore(detailEntry.value.chore);
+}
+
+function deleteFromDetail() {
+    if (!detailEntry.value) return;
+    showDetailDialog.value = false;
+    openDeleteChore(detailEntry.value.chore);
+}
 
 function printChart() {
     window.print();
@@ -434,11 +470,31 @@ const { onTouchStart: swipeTouchStart, onTouchEnd: swipeTouchEnd } = useSwipe(ne
                             {{ detailEntry.chore.description }}
                         </DialogDescription>
                     </DialogHeader>
-                    <div class="space-y-3 pt-2">
+                    <div class="space-y-4 pt-2">
                         <div class="text-sm text-muted-foreground font-medium">
                             Assigned on {{ DAY_LABELS_FULL[detailDay] }}
                         </div>
-                        <div v-if="detailEntry?.members.length" class="space-y-1.5">
+
+                        <!-- Assignable member list (can toggle) -->
+                        <div v-if="can.assign && detailEntry" class="space-y-1">
+                            <button
+                                v-for="member in familyMembers"
+                                :key="member.id"
+                                class="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors hover:bg-accent"
+                                :disabled="isTogglingAssignment"
+                                @click="toggleAssignmentFromDetail(detailEntry!.chore.id, member.id, detailDay)"
+                            >
+                                <span
+                                    class="h-3 w-3 shrink-0 rounded-full"
+                                    :class="EVENT_COLORS[member.color]?.dot ?? 'bg-blue-500'"
+                                />
+                                <span class="flex-1 text-left truncate">{{ member.nickname || member.name }}</span>
+                                <Check v-if="detailAssignedIds.has(member.id)" class="h-3.5 w-3.5 shrink-0 text-emerald-500" />
+                            </button>
+                        </div>
+
+                        <!-- Read-only member list -->
+                        <div v-else-if="detailEntry?.members.length" class="space-y-1.5">
                             <div
                                 v-for="member in detailEntry.members"
                                 :key="member.id"
@@ -455,6 +511,16 @@ const { onTouchStart: swipeTouchStart, onTouchEnd: swipeTouchEnd } = useSwipe(ne
                             No one assigned.
                         </div>
                     </div>
+                    <DialogFooter v-if="can.edit || can.delete" class="gap-2">
+                        <Button v-if="can.edit" variant="outline" size="sm" @click="editFromDetail">
+                            <Pencil class="h-3.5 w-3.5 mr-1" />
+                            Edit
+                        </Button>
+                        <Button v-if="can.delete" variant="destructive" size="sm" @click="deleteFromDetail">
+                            <Trash2 class="h-3.5 w-3.5 mr-1" />
+                            Delete
+                        </Button>
+                    </DialogFooter>
                 </DialogContent>
             </Dialog>
 

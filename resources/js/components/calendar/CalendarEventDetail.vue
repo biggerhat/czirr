@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { usePage } from '@inertiajs/vue3';
-import { Pencil, Trash2, Clock, Users, Repeat } from 'lucide-vue-next';
+import { Pencil, Trash2, Clock, Users, Repeat, Tag } from 'lucide-vue-next';
 import { ref, computed } from 'vue';
 import RecurrenceEditModeDialog from '@/components/calendar/RecurrenceEditModeDialog.vue';
 import { Button } from '@/components/ui/button';
@@ -150,6 +150,12 @@ async function handleDelete(deleteMode: string) {
                             </div>
                         </template>
                     </div>
+                </div>
+
+                <!-- Event type -->
+                <div v-if="event.event_type" class="flex items-start gap-3 text-sm">
+                    <Tag class="h-4 w-4 mt-0.5 text-muted-foreground shrink-0" />
+                    <div class="text-muted-foreground">{{ event.event_type.name }}</div>
                 </div>
 
                 <!-- Recurrence info -->

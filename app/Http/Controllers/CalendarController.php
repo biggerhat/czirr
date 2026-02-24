@@ -32,7 +32,8 @@ class CalendarController extends Controller
             ->get(['id', 'name']);
 
         $familyMembers = $user->familyMembers()
-            ->select('id', 'user_id', 'name', 'color')
+            ->select('id', 'user_id', 'name', 'nickname', 'role', 'color')
+            ->orderByRaw("CASE WHEN role = 'parent' THEN 0 ELSE 1 END")
             ->orderBy('name')
             ->get();
 
@@ -44,7 +45,7 @@ class CalendarController extends Controller
         return Inertia::render('calendar/Index', [
             'familyMembers' => $familyMembers,
             'budgetCategories' => $budgetCategories,
-            'eventTypes' => $eventTypes,
+            'eventTypes' => Inertia::once(fn () => $eventTypes),
         ]);
     }
 }

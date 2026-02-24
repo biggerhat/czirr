@@ -37,7 +37,9 @@
       "Bash(npx eslint:*)",
       "Bash(node:*)",
       "Bash(dpkg -l:*)",
-      "Bash(npm uninstall:*)"
+      "Bash(npm uninstall:*)",
+      "WebFetch(domain:inertiajs.com)",
+      "WebFetch(domain:v2.inertiajs.com)"
     ]
   }
 }
