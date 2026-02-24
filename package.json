@@ -3,11 +3,12 @@
     "private": true,
     "type": "module",
     "scripts": {
-        "build": "vite build",
-        "build:ssr": "vite build && vite build --ssr",
+        "build": "vite build && cp public/build/sw.js public/sw.js 2>/dev/null; cp public/build/manifest.webmanifest public/manifest.webmanifest 2>/dev/null; true",
+        "build:ssr": "vite build && vite build --ssr && cp public/build/sw.js public/sw.js 2>/dev/null; cp public/build/manifest.webmanifest public/manifest.webmanifest 2>/dev/null; true",
         "dev": "vite",
         "format": "prettier --write resources/",
         "format:check": "prettier --check resources/",
+        "generate-pwa-assets": "pwa-assets-generator --preset minimal-2023 public/favicon.svg",
         "lint": "eslint . --fix"
     },
     "devDependencies": {
@@ -15,6 +16,7 @@
         "@laravel/vite-plugin-wayfinder": "^0.1.3",
         "@tailwindcss/vite": "^4.1.11",
         "@types/node": "^22.13.5",
+        "@vite-pwa/assets-generator": "^1.0.2",
         "@vitejs/plugin-vue": "^6.0.0",
         "@vue/eslint-config-typescript": "^14.3.0",
         "concurrently": "^9.0.1",
@@ -28,6 +30,7 @@
         "typescript": "^5.2.2",
         "typescript-eslint": "^8.23.0",
         "vite": "^7.0.4",
+        "vite-plugin-pwa": "^1.2.0",
         "vue-tsc": "^2.2.4"
     },
     "dependencies": {

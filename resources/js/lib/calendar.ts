@@ -1,5 +1,17 @@
 import type { CalendarEvent, EventColor } from '@/types/calendar';
 
+const formatterCache = new Map<string, Intl.DateTimeFormat>();
+
+function getCachedFormatter(locale: string | undefined, timezone: string, options: Intl.DateTimeFormatOptions): Intl.DateTimeFormat {
+    const key = (locale ?? '') + '|' + timezone + '|' + JSON.stringify(options);
+    let fmt = formatterCache.get(key);
+    if (!fmt) {
+        fmt = new Intl.DateTimeFormat(locale, { timeZone: timezone, ...options });
+        formatterCache.set(key, fmt);
+    }
+    return fmt;
+}
+
 export type ColorClasses = {
     bg: string;
     text: string;
@@ -27,34 +39,23 @@ export function getEventColor(event: CalendarEvent): EventColor {
 }
 
 export function formatEventTime(dateStr: string, timezone: string): string {
-    return new Date(dateStr).toLocaleTimeString(undefined, {
-        hour: 'numeric',
-        minute: '2-digit',
-        timeZone: timezone,
-    });
+    const opts: Intl.DateTimeFormatOptions = { hour: 'numeric', minute: '2-digit' };
+    return getCachedFormatter(undefined, timezone, opts).format(new Date(dateStr));
 }
 
 export function formatEventDate(dateStr: string, timezone: string): string {
-    return new Date(dateStr).toLocaleDateString(undefined, {
-        weekday: 'short',
-        month: 'short',
-        day: 'numeric',
-        timeZone: timezone,
-    });
+    const opts: Intl.DateTimeFormatOptions = { weekday: 'short', month: 'short', day: 'numeric' };
+    return getCachedFormatter(undefined, timezone, opts).format(new Date(dateStr));
 }
 
 export function formatEventDateFull(dateStr: string, timezone: string): string {
-    return new Date(dateStr).toLocaleDateString(undefined, {
-        weekday: 'long',
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-        timeZone: timezone,
-    });
+    const opts: Intl.DateTimeFormatOptions = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+    return getCachedFormatter(undefined, timezone, opts).format(new Date(dateStr));
 }
 
 export function toLocalDateString(date: Date, timezone: string): string {
-    const parts = new Intl.DateTimeFormat('en-CA', { timeZone: timezone, year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(date);
+    const opts: Intl.DateTimeFormatOptions = { year: 'numeric', month: '2-digit', day: '2-digit' };
+    const parts = getCachedFormatter('en-CA', timezone, opts).formatToParts(date);
     const year = parts.find(p => p.type === 'year')!.value;
     const month = parts.find(p => p.type === 'month')!.value;
     const day = parts.find(p => p.type === 'day')!.value;
@@ -66,9 +67,9 @@ export function isSameDay(a: Date, b: Date, timezone: string): boolean {
 }
 
 export function getLocalHour(date: Date, timezone: string): number {
-    return parseInt(new Intl.DateTimeFormat('en-US', { timeZone: timezone, hour: 'numeric', hour12: false }).format(date));
+    return parseInt(getCachedFormatter('en-US', timezone, { hour: 'numeric', hour12: false }).format(date));
 }
 
 export function getLocalMinute(date: Date, timezone: string): number {
-    return parseInt(new Intl.DateTimeFormat('en-US', { timeZone: timezone, minute: 'numeric' }).format(date));
+    return parseInt(getCachedFormatter('en-US', timezone, { minute: 'numeric' }).format(date));
 }

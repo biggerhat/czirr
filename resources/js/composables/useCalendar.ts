@@ -220,7 +220,27 @@ export function useCalendar() {
                 },
             });
             if (response.ok) {
-                events.value = await response.json();
+                const data: CalendarEvent[] = await response.json();
+
+                // Hydrate recurring occurrences from their master event
+                const masterMap = new Map<number, CalendarEvent>();
+                for (const e of data) {
+                    if (e.rrule && !e.is_occurrence) masterMap.set(e.id as number, e);
+                }
+                for (const e of data) {
+                    if (e.is_occurrence && e.master_event_id && !e.owner) {
+                        const master = masterMap.get(e.master_event_id);
+                        if (master) {
+                            e.owner = master.owner;
+                            e.attendees = master.attendees;
+                            e.family_members = master.family_members;
+                            e.event_type_id = e.event_type_id ?? master.event_type_id;
+                            e.event_type = e.event_type ?? master.event_type;
+                        }
+                    }
+                }
+
+                events.value = data;
             }
         } finally {
             isLoading.value = false;
@@ -252,8 +272,15 @@ export function useCalendar() {
         closeModals();
     }
 
-    // Auto-load events when visible range changes
+    // Auto-load events when visible range changes (skip if boundaries unchanged)
+    let lastFetchedRange = { start: '', end: '' };
+
     watch(visibleRange, () => {
+        const { start, end } = visibleRange.value;
+        const startStr = start.toISOString();
+        const endStr = end.toISOString();
+        if (startStr === lastFetchedRange.start && endStr === lastFetchedRange.end) return;
+        lastFetchedRange = { start: startStr, end: endStr };
         loadEvents();
     }, { immediate: true });
 

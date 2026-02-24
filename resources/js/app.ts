@@ -26,3 +26,17 @@ createInertiaApp({
 
 // This will set light / dark mode on page load...
 initializeTheme();
+
+// Register service worker for PWA support (SSR-safe)
+if (typeof window !== 'undefined') {
+    import('virtual:pwa-register').then(({ registerSW }) => {
+        registerSW({
+            immediate: true,
+            onRegisteredSW(_swUrl, registration) {
+                if (registration) {
+                    setInterval(() => registration.update(), 60 * 60 * 1000);
+                }
+            },
+        });
+    });
+}
