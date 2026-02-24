@@ -6,14 +6,36 @@ import { type BreadcrumbItem } from '@/types';
 import type { UpcomingBill } from '@/types/budgeting';
 import type { CalendarEvent } from '@/types/calendar';
 import type { ChoreAssignment } from '@/types/chores';
+import type { FamilyList, FamilyListItem } from '@/types/lists';
+import type { MealType } from '@/types/meal-plans';
+import { MEAL_TYPE_LABELS } from '@/types/meal-plans';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Spinner } from '@/components/ui/spinner';
+import { CookingPot } from 'lucide-vue-next';
 import { EVENT_COLORS, getEventColor, formatEventTime, formatEventDate } from '@/lib/calendar';
+
+type DashboardMeal = {
+    id: number;
+    meal_type: MealType;
+    name: string;
+    recipe_id: number | null;
+};
+
 const props = defineProps<{
     upcomingBills: UpcomingBill[];
     todaysChores: ChoreAssignment[];
+    todaysMeals: DashboardMeal[];
+    pinnedLists: FamilyList[];
 }>();
+
+const mealTypeColors: Record<MealType, string> = {
+    breakfast: 'bg-amber-500',
+    lunch: 'bg-green-500',
+    dinner: 'bg-blue-500',
+    snack: 'bg-purple-500',
+};
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -89,6 +111,32 @@ async function loadEvents() {
 }
 
 onMounted(loadEvents);
+
+const MAX_PINNED_ITEMS = 8;
+
+function xsrfHeaders(): HeadersInit {
+    return {
+        'Accept': 'application/json',
+        'X-Requested-With': 'XMLHttpRequest',
+        'X-XSRF-TOKEN': decodeURIComponent(
+            document.cookie.match(/XSRF-TOKEN=([^;]+)/)?.[1] ?? '',
+        ),
+    };
+}
+
+async function toggleListItem(item: FamilyListItem) {
+    await fetch(`/list-items/${item.id}/toggle`, {
+        method: 'PATCH',
+        headers: xsrfHeaders(),
+    });
+    item.is_completed = !item.is_completed;
+}
+
+function pinnedListProgress(list: FamilyList): string {
+    const items = list.items ?? [];
+    const done = items.filter(i => i.is_completed).length;
+    return `${done}/${items.length}`;
+}
 </script>
 
 <template>
@@ -172,6 +220,37 @@ onMounted(loadEvents);
                     </CardContent>
                 </Card>
 
+                <!-- Today's Meals -->
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Today's Meals</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <div v-if="todaysMeals.length === 0" class="text-sm text-muted-foreground py-4 text-center">
+                            No meals planned for today.
+                        </div>
+                        <ul v-else class="space-y-3">
+                            <li
+                                v-for="meal in todaysMeals"
+                                :key="meal.id"
+                                class="flex items-center gap-3"
+                            >
+                                <span
+                                    class="size-2.5 shrink-0 rounded-full"
+                                    :class="mealTypeColors[meal.meal_type]"
+                                />
+                                <div class="flex-1 min-w-0">
+                                    <div class="text-sm font-medium truncate">{{ meal.name }}</div>
+                                    <div class="text-xs text-muted-foreground">
+                                        {{ MEAL_TYPE_LABELS[meal.meal_type] }}
+                                    </div>
+                                </div>
+                                <CookingPot v-if="meal.recipe_id" class="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                            </li>
+                        </ul>
+                    </CardContent>
+                </Card>
+
                 <!-- Today's Chores -->
                 <Card>
                     <CardHeader>
@@ -197,6 +276,46 @@ onMounted(loadEvents);
                                         {{ assignment.family_member.nickname || assignment.family_member.name }}
                                     </div>
                                 </div>
+                            </li>
+                        </ul>
+                    </CardContent>
+                </Card>
+
+                <!-- Pinned Lists -->
+                <Card v-for="list in pinnedLists" :key="`list-${list.id}`">
+                    <CardHeader class="flex-row items-center justify-between space-y-0">
+                        <CardTitle>
+                            <a :href="`/lists/${list.id}`" class="hover:underline">{{ list.name }}</a>
+                        </CardTitle>
+                        <span class="text-xs text-muted-foreground">{{ pinnedListProgress(list) }} done</span>
+                    </CardHeader>
+                    <CardContent>
+                        <div v-if="!list.items || list.items.length === 0" class="text-sm text-muted-foreground py-4 text-center">
+                            No items in this list.
+                        </div>
+                        <ul v-else class="space-y-2">
+                            <li
+                                v-for="item in list.items!.slice(0, MAX_PINNED_ITEMS)"
+                                :key="item.id"
+                                class="flex items-center gap-2 cursor-pointer"
+                                @click="toggleListItem(item)"
+                            >
+                                <Checkbox
+                                    :model-value="item.is_completed"
+                                    @click.stop
+                                    @update:model-value="toggleListItem(item)"
+                                />
+                                <span
+                                    class="text-sm truncate"
+                                    :style="item.is_completed ? { textDecoration: 'line-through', color: 'var(--color-muted-foreground)' } : {}"
+                                >
+                                    {{ item.name }}<span v-if="item.quantity" class="text-muted-foreground"> ({{ item.quantity }})</span>
+                                </span>
+                            </li>
+                            <li v-if="list.items!.length > MAX_PINNED_ITEMS" class="pt-1">
+                                <a :href="`/lists/${list.id}`" class="text-xs text-primary hover:underline">
+                                    View all {{ list.items!.length }} items &rarr;
+                                </a>
                             </li>
                         </ul>
                     </CardContent>

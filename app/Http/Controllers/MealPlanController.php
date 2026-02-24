@@ -250,7 +250,7 @@ class MealPlanController extends Controller
                     foreach ($quantities as $q) {
                         $part = $q['qty'];
                         if ($q['unit'] !== '') {
-                            $part .= ($part !== '' ? ' ' : '') . $q['unit'];
+                            $part .= ($part !== '' ? ' ' : '').$q['unit'];
                         }
                         if ($part !== '') {
                             $parts[] = $part;
@@ -295,5 +295,4 @@ class MealPlanController extends Controller
 
         return Recipe::where('user_id', $linkedMember->user_id);
     }
-
 }

@@ -264,11 +264,11 @@ async function confirmDelete() {
                 </div>
 
                 <!-- Sort, Group & count -->
-                <div class="flex flex-wrap items-center gap-3">
-                    <div class="flex items-center gap-2">
-                        <span class="text-sm text-muted-foreground">Sort</span>
+                <div class="flex flex-col sm:flex-row flex-wrap items-start sm:items-center gap-3">
+                    <div class="flex items-center gap-2 w-full sm:w-auto">
+                        <span class="text-sm text-muted-foreground shrink-0">Sort</span>
                         <Select v-model="sortBy">
-                            <SelectTrigger class="h-8 w-[160px] text-sm">
+                            <SelectTrigger class="h-8 w-full sm:w-[160px] text-sm">
                                 <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
@@ -282,10 +282,10 @@ async function confirmDelete() {
                             </SelectContent>
                         </Select>
                     </div>
-                    <div class="flex items-center gap-2">
-                        <span class="text-sm text-muted-foreground">Group</span>
+                    <div class="flex items-center gap-2 w-full sm:w-auto">
+                        <span class="text-sm text-muted-foreground shrink-0">Group</span>
                         <Select v-model="groupBy">
-                            <SelectTrigger class="h-8 w-[140px] text-sm">
+                            <SelectTrigger class="h-8 w-full sm:w-[140px] text-sm">
                                 <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
@@ -336,11 +336,11 @@ async function confirmDelete() {
                                 </div>
                                 <div v-if="can.edit || can.delete" class="flex items-center gap-1 shrink-0">
                                     <Link v-if="can.edit" :href="`/recipes/${recipe.id}/edit`" @click.stop>
-                                        <Button variant="outline" size="icon" class="h-7 w-7">
+                                        <Button variant="outline" size="icon" class="h-8 w-8">
                                             <Pencil class="h-3.5 w-3.5" />
                                         </Button>
                                     </Link>
-                                    <Button v-if="can.delete" variant="outline" size="icon" class="h-7 w-7 text-destructive" @click.prevent="openDelete(recipe)">
+                                    <Button v-if="can.delete" variant="outline" size="icon" class="h-8 w-8 text-destructive" @click.prevent="openDelete(recipe)">
                                         <Trash2 class="h-3.5 w-3.5" />
                                     </Button>
                                 </div>

@@ -54,9 +54,9 @@ class BudgetService
 
         if ($bill->is_active && $bill->event_id) {
             $this->syncEventWithBill($bill);
-        } elseif ($bill->is_active && !$bill->event_id) {
+        } elseif ($bill->is_active && ! $bill->event_id) {
             $this->createEventForBill($bill->user, $bill);
-        } elseif (!$bill->is_active && $bill->event_id) {
+        } elseif (! $bill->is_active && $bill->event_id) {
             $this->deleteBillEvent($bill);
         }
 
@@ -90,9 +90,9 @@ class BudgetService
 
         if ($income->is_active && $income->event_id) {
             $this->syncEventWithIncome($income);
-        } elseif ($income->is_active && !$income->event_id) {
+        } elseif ($income->is_active && ! $income->event_id) {
             $this->createEventForIncome($income->user, $income);
-        } elseif (!$income->is_active && $income->event_id) {
+        } elseif (! $income->is_active && $income->event_id) {
             $this->deleteIncomeEvent($income);
         }
 
@@ -133,6 +133,7 @@ class BudgetService
             ->filter(fn (Bill $bill) => $bill->isDueInRange($start, $end))
             ->map(function (Bill $bill) use ($start, $end) {
                 $bill->setAttribute('is_paid_this_month', $bill->isPaidForRange($start, $end));
+
                 return $bill;
             })
             ->values();
@@ -187,7 +188,7 @@ class BudgetService
     private function syncEventWithBill(Bill $bill): void
     {
         $event = $bill->event;
-        if (!$event) {
+        if (! $event) {
             return;
         }
 
@@ -224,7 +225,7 @@ class BudgetService
     private function syncEventWithIncome(Income $income): void
     {
         $event = $income->event;
-        if (!$event) {
+        if (! $event) {
             return;
         }
 
@@ -255,8 +256,8 @@ class BudgetService
     {
         return match ($frequency) {
             'once' => null,
-            'weekly' => 'FREQ=WEEKLY;BYDAY=' . strtoupper(substr($startsAt->englishDayOfWeek, 0, 2)),
-            'biweekly' => 'FREQ=WEEKLY;INTERVAL=2;BYDAY=' . strtoupper(substr($startsAt->englishDayOfWeek, 0, 2)),
+            'weekly' => 'FREQ=WEEKLY;BYDAY='.strtoupper(substr($startsAt->englishDayOfWeek, 0, 2)),
+            'biweekly' => 'FREQ=WEEKLY;INTERVAL=2;BYDAY='.strtoupper(substr($startsAt->englishDayOfWeek, 0, 2)),
             'monthly' => "FREQ=MONTHLY;BYMONTHDAY={$payDay}",
             'quarterly' => "FREQ=MONTHLY;INTERVAL=3;BYMONTHDAY={$payDay}",
             'yearly' => "FREQ=YEARLY;BYMONTHDAY={$payDay}",

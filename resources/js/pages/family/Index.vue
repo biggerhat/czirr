@@ -454,8 +454,8 @@ function formatModuleName(module: string): string {
                 <!-- Add form -->
                 <div class="rounded-md border p-4 space-y-3">
                     <div class="text-sm font-medium">Add family member</div>
-                    <div class="flex items-end gap-3 flex-wrap">
-                        <div class="flex-1 min-w-[140px] space-y-1.5">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div class="space-y-1.5">
                             <label class="text-sm text-muted-foreground">Name</label>
                             <Input
                                 v-model="newName"
@@ -463,7 +463,7 @@ function formatModuleName(module: string): string {
                                 @keydown.enter="addMember"
                             />
                         </div>
-                        <div class="flex-1 min-w-[140px] space-y-1.5">
+                        <div class="space-y-1.5">
                             <label class="text-sm text-muted-foreground">Nickname</label>
                             <Input
                                 v-model="newNickname"
@@ -471,7 +471,7 @@ function formatModuleName(module: string): string {
                                 @keydown.enter="addMember"
                             />
                         </div>
-                        <div class="min-w-[120px] space-y-1.5">
+                        <div class="space-y-1.5">
                             <label class="text-sm text-muted-foreground">Visibility</label>
                             <Select v-model="newVisibility">
                                 <SelectTrigger>
@@ -484,7 +484,7 @@ function formatModuleName(module: string): string {
                                 </SelectContent>
                             </Select>
                         </div>
-                        <div v-if="availableUsers.length > 0" class="min-w-[160px] space-y-1.5">
+                        <div v-if="availableUsers.length > 0" class="space-y-1.5">
                             <label class="text-sm text-muted-foreground">Link account</label>
                             <Select v-model="newLinkedUserId">
                                 <SelectTrigger>
@@ -498,7 +498,7 @@ function formatModuleName(module: string): string {
                                 </SelectContent>
                             </Select>
                         </div>
-                        <div v-if="newLinkedUserId !== 'none'" class="min-w-[120px] space-y-1.5">
+                        <div v-if="newLinkedUserId !== 'none'" class="space-y-1.5">
                             <label class="text-sm text-muted-foreground">Role</label>
                             <Select v-model="newSpatieRole">
                                 <SelectTrigger>
@@ -552,10 +552,10 @@ function formatModuleName(module: string): string {
                                         @keydown.enter="saveEdit(member)"
                                         @keydown.escape="cancelEdit"
                                     />
-                                    <Button variant="ghost" size="icon" class="h-7 w-7" @click="saveEdit(member)">
+                                    <Button variant="ghost" size="icon" class="h-8 w-8" @click="saveEdit(member)">
                                         <Check class="h-4 w-4" />
                                     </Button>
-                                    <Button variant="ghost" size="icon" class="h-7 w-7" @click="cancelEdit">
+                                    <Button variant="ghost" size="icon" class="h-8 w-8" @click="cancelEdit">
                                         <X class="h-4 w-4" />
                                     </Button>
                                 </div>
@@ -619,25 +619,27 @@ function formatModuleName(module: string): string {
                         <template v-else>
                             <div class="flex items-center gap-3">
                                 <div :class="['w-3 h-3 rounded-full shrink-0', EVENT_COLORS[member.color]?.dot ?? 'bg-blue-500']" />
-                                <div class="flex-1 min-w-0">
+                                <div class="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-0 flex-1 min-w-0">
                                     <span class="text-sm font-medium">{{ member.nickname ?? member.name }}</span>
-                                    <span v-if="member.nickname" class="text-sm text-muted-foreground ml-1.5">({{ member.name }})</span>
-                                    <span v-if="member.spatie_role" class="inline-flex items-center gap-1 ml-2 px-1.5 py-0.5 text-xs font-medium rounded bg-primary/10 text-primary">
-                                        <Shield class="h-3 w-3" />
-                                        {{ member.spatie_role }}
-                                    </span>
-                                    <span :class="[
-                                        'inline-flex items-center ml-1.5 px-1.5 py-0.5 text-xs rounded',
-                                        'bg-muted/50 text-muted-foreground/70',
-                                    ]">{{ member.role }}</span>
-                                    <span v-if="member.linked_user" class="inline-flex items-center gap-1 ml-2 text-xs text-muted-foreground">
-                                        <LinkIcon class="h-3 w-3" />
-                                        {{ member.linked_user.email }}
-                                    </span>
-                                    <span v-else class="inline-flex items-center gap-1 ml-2 text-xs text-muted-foreground/50">
-                                        <UnlinkIcon class="h-3 w-3" />
-                                        No account
-                                    </span>
+                                    <span v-if="member.nickname" class="text-sm text-muted-foreground sm:ml-1.5">({{ member.name }})</span>
+                                    <div class="flex flex-wrap items-center gap-1 sm:ml-1.5">
+                                        <span v-if="member.spatie_role" class="inline-flex items-center gap-1 px-1.5 py-0.5 text-xs font-medium rounded bg-primary/10 text-primary">
+                                            <Shield class="h-3 w-3" />
+                                            {{ member.spatie_role }}
+                                        </span>
+                                        <span :class="[
+                                            'inline-flex items-center px-1.5 py-0.5 text-xs rounded',
+                                            'bg-muted/50 text-muted-foreground/70',
+                                        ]">{{ member.role }}</span>
+                                        <span v-if="member.linked_user" class="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                                            <LinkIcon class="h-3 w-3" />
+                                            {{ member.linked_user.email }}
+                                        </span>
+                                        <span v-else class="inline-flex items-center gap-1 text-xs text-muted-foreground/50">
+                                            <UnlinkIcon class="h-3 w-3" />
+                                            No account
+                                        </span>
+                                    </div>
                                 </div>
                                 <!-- Spatie role dropdown for linked members -->
                                 <Select
@@ -645,7 +647,7 @@ function formatModuleName(module: string): string {
                                     :model-value="member.spatie_role ?? ''"
                                     @update:model-value="updateMemberSpatieRole(member, String($event))"
                                 >
-                                    <SelectTrigger class="h-7 w-[110px] text-xs">
+                                    <SelectTrigger class="h-7 w-full sm:w-[110px] text-xs">
                                         <SelectValue placeholder="Role" />
                                     </SelectTrigger>
                                     <SelectContent>
@@ -654,10 +656,10 @@ function formatModuleName(module: string): string {
                                         </SelectItem>
                                     </SelectContent>
                                 </Select>
-                                <Button variant="ghost" size="icon" class="h-7 w-7" @click="startEdit(member)">
+                                <Button variant="ghost" size="icon" class="h-8 w-8 shrink-0" @click="startEdit(member)">
                                     <Pencil class="h-3.5 w-3.5" />
                                 </Button>
-                                <Button variant="ghost" size="icon" class="h-7 w-7 text-destructive" @click="openDeleteMember(member)">
+                                <Button variant="ghost" size="icon" class="h-8 w-8 shrink-0 text-destructive" @click="openDeleteMember(member)">
                                     <Trash2 class="h-3.5 w-3.5" />
                                 </Button>
                             </div>
@@ -711,14 +713,14 @@ function formatModuleName(module: string): string {
                                     </span>
                                 </div>
                                 <div class="flex items-center gap-1">
-                                    <Button variant="ghost" size="icon" class="h-7 w-7" @click="openEditRole(role)">
+                                    <Button variant="ghost" size="icon" class="h-8 w-8" @click="openEditRole(role)">
                                         <Pencil class="h-3.5 w-3.5" />
                                     </Button>
                                     <Button
                                         v-if="!role.is_default"
                                         variant="ghost"
                                         size="icon"
-                                        class="h-7 w-7 text-destructive"
+                                        class="h-8 w-8 text-destructive"
                                         @click="openDeleteRole(role)"
                                     >
                                         <Trash2 class="h-3.5 w-3.5" />
@@ -775,7 +777,7 @@ function formatModuleName(module: string): string {
                                             />
                                             <span class="text-sm font-medium">{{ formatModuleName(module as string) }}</span>
                                         </div>
-                                        <div class="ml-6 flex flex-wrap gap-x-4 gap-y-1">
+                                        <div class="ml-3 sm:ml-6 flex flex-wrap gap-x-4 gap-y-1">
                                             <label
                                                 v-for="perm in perms"
                                                 :key="perm.value"

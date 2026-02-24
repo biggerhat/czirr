@@ -79,7 +79,7 @@ class Event extends Model
 
     public function isRecurring(): bool
     {
-        return !empty($this->rrule);
+        return ! empty($this->rrule);
     }
 
     public function isException(): bool

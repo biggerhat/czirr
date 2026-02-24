@@ -21,6 +21,7 @@ export type FamilyList = {
     name: string;
     type: ListType;
     visibility: ListVisibility;
+    is_pinned: boolean;
     items?: FamilyListItem[];
     items_count?: number;
     members?: FamilyMember[];

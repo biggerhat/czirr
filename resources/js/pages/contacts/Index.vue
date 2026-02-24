@@ -101,19 +101,19 @@ function formatLocation(contact: Contact): string {
     <AppLayout :breadcrumbs="breadcrumbs">
         <div class="flex h-full flex-1 flex-col gap-4 p-4">
             <!-- Header -->
-            <div class="flex items-center justify-between gap-4">
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                 <h2 class="text-lg font-semibold">Address Book</h2>
-                <div class="flex items-center gap-2">
-                    <div class="relative">
+                <div class="flex items-center gap-2 w-full sm:w-auto">
+                    <div class="relative flex-1 sm:flex-initial">
                         <Search class="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                         <Input
                             v-model="searchQuery"
                             placeholder="Search contacts..."
-                            class="pl-9 w-[250px]"
+                            class="pl-9 w-full sm:w-[250px]"
                             @input="onSearch"
                         />
                     </div>
-                    <Button v-if="can.create" size="sm" @click="openCreate">
+                    <Button v-if="can.create" size="sm" class="shrink-0" @click="openCreate">
                         <Plus class="h-4 w-4 mr-1" />
                         Add Contact
                     </Button>
@@ -140,10 +140,10 @@ function formatLocation(contact: Contact): string {
                     <div class="flex items-start justify-between gap-2">
                         <div class="font-medium">{{ formatName(contact) }}</div>
                         <div v-if="can.edit || can.delete" class="flex items-center gap-1 shrink-0">
-                            <Button v-if="can.edit" variant="outline" size="icon" class="h-7 w-7" @click="openEdit(contact)">
+                            <Button v-if="can.edit" variant="outline" size="icon" class="h-8 w-8" @click="openEdit(contact)">
                                 <Pencil class="h-3.5 w-3.5" />
                             </Button>
-                            <Button v-if="can.delete" variant="outline" size="icon" class="h-7 w-7 text-destructive" @click="openDelete(contact)">
+                            <Button v-if="can.delete" variant="outline" size="icon" class="h-8 w-8 text-destructive" @click="openDelete(contact)">
                                 <Trash2 class="h-3.5 w-3.5" />
                             </Button>
                         </div>
@@ -155,7 +155,7 @@ function formatLocation(contact: Contact): string {
                         </div>
                         <div v-if="contact.email" class="flex items-center gap-2">
                             <Mail class="h-3.5 w-3.5 shrink-0" />
-                            {{ contact.email }}
+                            <span class="break-all">{{ contact.email }}</span>
                         </div>
                         <div v-if="formatLocation(contact)" class="flex items-center gap-2">
                             <MapPin class="h-3.5 w-3.5 shrink-0" />

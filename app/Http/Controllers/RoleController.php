@@ -55,7 +55,7 @@ class RoleController extends Controller
 
         // Default roles can't be renamed
         if (! in_array($role->name, DefaultRole::names())) {
-            $rules['name'] = ['sometimes', 'string', 'max:255', 'unique:roles,name,' . $role->id];
+            $rules['name'] = ['sometimes', 'string', 'max:255', 'unique:roles,name,'.$role->id];
         }
 
         $validated = $request->validate($rules);

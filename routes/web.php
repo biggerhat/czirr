@@ -7,18 +7,18 @@ use App\Http\Controllers\CalendarController;
 use App\Http\Controllers\ChoreAssignmentController;
 use App\Http\Controllers\ChoreController;
 use App\Http\Controllers\ContactController;
-use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\CookbookController;
-use App\Http\Controllers\FamilyListController;
-use App\Http\Controllers\FamilyListItemController;
 use App\Http\Controllers\CuisineController;
-use App\Http\Controllers\RecipeController;
-use App\Http\Controllers\RecipeTagController;
+use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EventController;
 use App\Http\Controllers\ExpenseController;
+use App\Http\Controllers\FamilyListController;
+use App\Http\Controllers\FamilyListItemController;
 use App\Http\Controllers\FamilyMemberController;
-use App\Http\Controllers\MealPlanController;
 use App\Http\Controllers\IncomeController;
+use App\Http\Controllers\MealPlanController;
+use App\Http\Controllers\RecipeController;
+use App\Http\Controllers\RecipeTagController;
 use App\Http\Controllers\RoleController;
 use Illuminate\Support\Facades\Route;
 
@@ -43,6 +43,7 @@ Route::middleware(['auth', 'verified', 'family'])->group(function () {
     Route::post('lists', [FamilyListController::class, 'store'])->middleware('permission:lists.create');
     Route::put('lists/{familyList}', [FamilyListController::class, 'update'])->middleware('permission:lists.edit');
     Route::delete('lists/{familyList}', [FamilyListController::class, 'destroy'])->middleware('permission:lists.delete');
+    Route::patch('lists/{familyList}/pin', [FamilyListController::class, 'togglePin'])->middleware('permission:lists.edit');
 
     Route::post('lists/{familyList}/items', [FamilyListItemController::class, 'store'])->middleware('permission:lists.edit');
     Route::delete('lists/{familyList}/items/completed', [FamilyListItemController::class, 'clearCompleted'])->middleware('permission:lists.edit');

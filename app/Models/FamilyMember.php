@@ -15,6 +15,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 class FamilyMember extends Model
 {
     use HasFactory;
+
     protected $fillable = [
         'name',
         'nickname',

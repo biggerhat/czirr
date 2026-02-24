@@ -15,7 +15,7 @@ import {
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog';
-import { Check, Pencil, Plus, Trash2, X } from 'lucide-vue-next';
+import { Check, Pencil, Pin, PinOff, Plus, Trash2, X } from 'lucide-vue-next';
 import type { BreadcrumbItem } from '@/types';
 import type { FamilyMember } from '@/types/calendar';
 import type { FamilyList, FamilyListItem } from '@/types/lists';
@@ -134,6 +134,14 @@ async function deleteItem(item: FamilyListItem) {
     router.reload();
 }
 
+async function togglePin() {
+    await fetch(`/lists/${props.list.id}/pin`, {
+        method: 'PATCH',
+        headers: xsrfHeaders(),
+    });
+    router.reload();
+}
+
 function onListSaved() {
     router.reload();
 }
@@ -143,7 +151,7 @@ function onListSaved() {
     <AppLayout :breadcrumbs="breadcrumbs">
         <div class="flex h-full flex-1 flex-col gap-4 p-4">
             <!-- Header -->
-            <div class="flex items-center justify-between">
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                 <div class="flex items-center gap-3">
                     <h2 class="text-lg font-semibold">{{ list.name }}</h2>
                     <Badge variant="secondary">{{ LIST_TYPE_LABELS[list.type] }}</Badge>
@@ -152,6 +160,11 @@ function onListSaved() {
                     <span v-if="totalCount > 0">{{ completedCount }}/{{ totalCount }} done</span>
                     <Button v-if="completedCount > 0" size="sm" variant="outline" @click="showClearDialog = true">
                         Clear Checked
+                    </Button>
+                    <Button size="sm" variant="outline" @click="togglePin">
+                        <Pin v-if="!list.is_pinned" class="h-3.5 w-3.5 mr-1" />
+                        <PinOff v-else class="h-3.5 w-3.5 mr-1" />
+                        {{ list.is_pinned ? 'Unpin' : 'Pin' }}
                     </Button>
                     <Button size="sm" variant="outline" @click="showListModal = true">
                         <Pencil class="h-3.5 w-3.5 mr-1" />
@@ -205,10 +218,10 @@ function onListSaved() {
                                     {{ item.notes }}
                                 </p>
                             </div>
-                            <Button variant="ghost" size="icon" class="h-7 w-7 shrink-0" @click.stop="startEdit(item)">
+                            <Button variant="ghost" size="icon" class="h-8 w-8 shrink-0" @click.stop="startEdit(item)">
                                 <Pencil class="h-3 w-3" />
                             </Button>
-                            <Button variant="ghost" size="icon" class="h-7 w-7 shrink-0 text-destructive" @click.stop="deleteItem(item)">
+                            <Button variant="ghost" size="icon" class="h-8 w-8 shrink-0 text-destructive" @click.stop="deleteItem(item)">
                                 <Trash2 class="h-3 w-3" />
                             </Button>
                         </template>
@@ -227,7 +240,7 @@ function onListSaved() {
                                     <Input
                                         v-model="editQty"
                                         placeholder="Qty"
-                                        class="h-8 text-sm w-20"
+                                        class="h-8 text-sm w-16 sm:w-20"
                                         @keydown.enter="saveEdit(item)"
                                         @keydown.escape="cancelEdit"
                                     />
@@ -240,10 +253,10 @@ function onListSaved() {
                                     @keydown.escape="cancelEdit"
                                 />
                             </div>
-                            <Button variant="ghost" size="icon" class="h-7 w-7 shrink-0" @click="saveEdit(item)">
+                            <Button variant="ghost" size="icon" class="h-8 w-8 shrink-0" @click="saveEdit(item)">
                                 <Check class="h-3 w-3" />
                             </Button>
-                            <Button variant="ghost" size="icon" class="h-7 w-7 shrink-0" @click="cancelEdit">
+                            <Button variant="ghost" size="icon" class="h-8 w-8 shrink-0" @click="cancelEdit">
                                 <X class="h-3 w-3" />
                             </Button>
                         </template>
@@ -262,7 +275,7 @@ function onListSaved() {
                     <Input
                         v-model="newItemQty"
                         placeholder="Qty"
-                        class="h-8 text-sm w-20"
+                        class="h-8 text-sm w-16 sm:w-20"
                         @keydown.enter="addItem"
                     />
                     <Button size="sm" :disabled="!newItemName.trim() || isAdding" @click="addItem">

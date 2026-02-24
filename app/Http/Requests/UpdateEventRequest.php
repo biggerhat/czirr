@@ -23,8 +23,8 @@ class UpdateEventRequest extends FormRequest
             ]);
         } else {
             $this->merge([
-                'starts_at' => Carbon::parse($this->input('start_date') . ' ' . $this->input('start_time'), $timezone)->utc()->toDateTimeString(),
-                'ends_at' => Carbon::parse($this->input('end_date') . ' ' . $this->input('end_time'), $timezone)->utc()->toDateTimeString(),
+                'starts_at' => Carbon::parse($this->input('start_date').' '.$this->input('start_time'), $timezone)->utc()->toDateTimeString(),
+                'ends_at' => Carbon::parse($this->input('end_date').' '.$this->input('end_time'), $timezone)->utc()->toDateTimeString(),
             ]);
         }
     }

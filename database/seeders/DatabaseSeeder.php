@@ -3,7 +3,6 @@
 namespace Database\Seeders;
 
 use App\Enums\FamilyRole;
-use App\Enums\MealType;
 use App\Models\Bill;
 use App\Models\BudgetCategory;
 use App\Models\Chore;

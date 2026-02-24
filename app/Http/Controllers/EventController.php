@@ -62,6 +62,7 @@ class EventController extends Controller
                 $event->setAttribute('is_exception', true);
                 $event->setAttribute('master_event_id', $event->recurring_event_id);
                 $event->setAttribute('occurrence_start', $event->original_start?->toIso8601String());
+
                 return $event;
             });
 
@@ -109,6 +110,7 @@ class EventController extends Controller
                 $result = $this->recurringService->editSingleOccurrence($event, $occurrenceStart, $data);
                 $result->familyMembers()->sync($familyMemberIds);
                 $result->load(['owner:id,name,email', 'attendees:id,name,email', 'familyMembers']);
+
                 return response()->json($result);
             }
 
@@ -117,6 +119,7 @@ class EventController extends Controller
                 $result = $this->recurringService->editThisAndFuture($event, $occurrenceStart, $data, $timezone);
                 $result->familyMembers()->sync($familyMemberIds);
                 $result->load(['owner:id,name,email', 'attendees:id,name,email', 'familyMembers']);
+
                 return response()->json($result);
             }
         }
@@ -145,11 +148,13 @@ class EventController extends Controller
         if ($event->isRecurring() && $occurrenceStart) {
             if ($deleteMode === 'single') {
                 $this->recurringService->deleteSingleOccurrence($event, $occurrenceStart);
+
                 return response()->json(null, 204);
             }
 
             if ($deleteMode === 'future') {
                 $this->recurringService->deleteThisAndFuture($event, $occurrenceStart, $timezone);
+
                 return response()->json(null, 204);
             }
         }

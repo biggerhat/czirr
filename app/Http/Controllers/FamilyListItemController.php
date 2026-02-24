@@ -2,10 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\ListVisibility;
 use App\Models\FamilyList;
 use App\Models\FamilyListItem;
 use App\Models\FamilyMember;
-use App\Enums\ListVisibility;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 

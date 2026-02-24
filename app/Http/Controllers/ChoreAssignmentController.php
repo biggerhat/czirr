@@ -37,6 +37,7 @@ class ChoreAssignmentController extends Controller
 
         if ($existing) {
             $existing->delete();
+
             return response()->json(['removed' => true]);
         }
 
