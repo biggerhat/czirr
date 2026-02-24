@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Carbon\Carbon;
+use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -138,7 +139,7 @@ class Bill extends Model
         return $this->occurrencesInRange($start, $end) > 0;
     }
 
-    public function nextDueDate(Carbon $from): Carbon
+    public function nextDueDate(CarbonInterface $from): CarbonInterface
     {
         $billStart = $this->start_date;
 
