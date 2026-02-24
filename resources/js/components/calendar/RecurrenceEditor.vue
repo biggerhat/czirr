@@ -16,6 +16,7 @@ const model = defineModel<RecurrenceConfig>({ required: true });
 const frequencyOptions: { value: RecurrenceFrequency; label: string }[] = [
     { value: 'none', label: 'Does not repeat' },
     { value: 'daily', label: 'Daily' },
+    { value: 'weekday', label: 'Every weekday (Mon–Fri)' },
     { value: 'weekly', label: 'Weekly' },
     { value: 'monthly', label: 'Monthly' },
     { value: 'yearly', label: 'Yearly' },
@@ -90,8 +91,8 @@ function setCount(e: Event) {
         </div>
 
         <template v-if="model.frequency !== 'none'">
-            <!-- Interval -->
-            <div class="space-y-2">
+            <!-- Interval (not shown for weekday preset) -->
+            <div v-if="model.frequency !== 'weekday'" class="space-y-2">
                 <Label>Every</Label>
                 <div class="flex items-center gap-2">
                     <Input
@@ -106,7 +107,7 @@ function setCount(e: Event) {
                 </div>
             </div>
 
-            <!-- Day-of-week (weekly only) -->
+            <!-- Day-of-week (weekly only, not shown for weekday preset) -->
             <div v-if="model.frequency === 'weekly'" class="space-y-2">
                 <Label>On days</Label>
                 <div class="flex gap-1">

@@ -6,7 +6,6 @@ use App\Enums\ListType;
 use App\Enums\ListVisibility;
 use App\Enums\MealType;
 use App\Models\FamilyList;
-use App\Models\FamilyMember;
 use App\Models\MealPlanEntry;
 use App\Models\Recipe;
 use Carbon\Carbon;
@@ -275,24 +274,16 @@ class MealPlanController extends Controller
     private function getVisibleEntries(Request $request)
     {
         $user = $request->user();
-        $linkedMember = FamilyMember::where('linked_user_id', $user->id)->first();
+        $ownerId = $user->familyOwnerId();
 
-        if (! $linkedMember) {
-            return $user->mealPlanEntries();
-        }
-
-        return MealPlanEntry::where('user_id', $linkedMember->user_id);
+        return MealPlanEntry::where('user_id', $ownerId);
     }
 
     private function getVisibleRecipes(Request $request)
     {
         $user = $request->user();
-        $linkedMember = FamilyMember::where('linked_user_id', $user->id)->first();
+        $ownerId = $user->familyOwnerId();
 
-        if (! $linkedMember) {
-            return $user->recipes();
-        }
-
-        return Recipe::where('user_id', $linkedMember->user_id);
+        return Recipe::where('user_id', $ownerId);
     }
 }

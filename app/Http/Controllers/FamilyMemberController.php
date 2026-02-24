@@ -20,22 +20,30 @@ class FamilyMemberController extends Controller
     {
         $user = $request->user();
 
-        // Auto-create a family member for the current user if they don't have one
-        $hasSelf = $user->familyMembers()->where('linked_user_id', $user->id)->exists();
-        if (! $hasSelf) {
-            $user->familyMembers()->create([
-                'name' => $user->name,
-                'role' => FamilyRole::Parent,
-                'color' => 'blue',
-                'linked_user_id' => $user->id,
-            ]);
+        // Resolve the family owner — for linked members this is the user who
+        // owns the family; for family owners it's themselves.
+        $ownerId = $user->familyOwnerId();
+        $isOwner = $ownerId === $user->id;
 
-            if (! $user->hasAnyRole(DefaultRole::names())) {
-                $user->assignRole('parent');
+        // Auto-create a self-linked family member only for family owners
+        // (users not linked into another family).
+        if ($isOwner) {
+            $hasSelf = $user->familyMembers()->where('linked_user_id', $user->id)->exists();
+            if (! $hasSelf) {
+                $user->familyMembers()->create([
+                    'name' => $user->name,
+                    'role' => FamilyRole::Parent,
+                    'color' => 'blue',
+                    'linked_user_id' => $user->id,
+                ]);
+
+                if (! $user->hasAnyRole(DefaultRole::names())) {
+                    $user->assignRole('parent');
+                }
             }
         }
 
-        $familyMembers = $user->familyMembers()
+        $familyMembers = FamilyMember::where('user_id', $ownerId)
             ->with('linkedUser:id,name,email')
             ->orderBy('name')
             ->get()
@@ -46,8 +54,8 @@ class FamilyMemberController extends Controller
                 return $data;
             });
 
-        // Users that could be linked (all users not already linked to a family member owned by this user)
-        $alreadyLinkedIds = $user->familyMembers()
+        // Users that could be linked (all users not already linked to a family member owned by this family)
+        $alreadyLinkedIds = FamilyMember::where('user_id', $ownerId)
             ->whereNotNull('linked_user_id')
             ->pluck('linked_user_id');
 

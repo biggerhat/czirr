@@ -164,17 +164,9 @@ class RecipeController extends Controller
     private function getVisibleRecipes(Request $request)
     {
         $user = $request->user();
+        $ownerId = $user->familyOwnerId();
 
-        $linkedMember = FamilyMember::where('linked_user_id', $user->id)->first();
-
-        if (! $linkedMember) {
-            return $user->recipes();
-        }
-
-        // Linked family members see the family owner's recipes
-        $familyOwnerId = $linkedMember->user_id;
-
-        return Recipe::where('user_id', $familyOwnerId);
+        return Recipe::where('user_id', $ownerId);
     }
 
     private function authorizeRecipeAccess(Request $request, Recipe $recipe): void

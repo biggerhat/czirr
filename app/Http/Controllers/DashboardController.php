@@ -6,7 +6,6 @@ use App\Enums\ListVisibility;
 use App\Models\Bill;
 use App\Models\ChoreAssignment;
 use App\Models\FamilyList;
-use App\Models\FamilyMember;
 use App\Models\MealPlanEntry;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -18,9 +17,11 @@ class DashboardController extends Controller
     public function index(Request $request): Response
     {
         $today = Carbon::today();
+        $user = $request->user();
+        $ownerId = $user->familyOwnerId();
+        $linkedMember = $user->linkedFamilyMember();
 
-        $bills = $request->user()
-            ->bills()
+        $bills = Bill::where('user_id', $ownerId)
             ->with('category')
             ->where('is_active', true)
             ->get();
@@ -36,28 +37,22 @@ class DashboardController extends Controller
             ->values();
 
         $todaysChores = ChoreAssignment::where('day_of_week', Carbon::now()->dayOfWeek)
-            ->whereHas('chore', fn ($q) => $q->where('user_id', $request->user()->id)->where('is_active', true))
+            ->whereHas('chore', fn ($q) => $q->where('user_id', $ownerId)->where('is_active', true))
             ->with(['chore', 'familyMember'])
             ->get();
 
-        // Today's meals — respect family visibility
-        $user = $request->user();
-        $linkedMember = FamilyMember::where('linked_user_id', $user->id)->first();
-        $mealsQuery = $linkedMember
-            ? MealPlanEntry::where('user_id', $linkedMember->user_id)
-            : $user->mealPlanEntries();
-
-        $todaysMeals = $mealsQuery
+        // Today's meals
+        $todaysMeals = MealPlanEntry::where('user_id', $ownerId)
             ->whereDate('date', $today)
             ->orderByRaw("FIELD(meal_type, 'breakfast', 'lunch', 'dinner', 'snack')")
             ->get(['id', 'date', 'meal_type', 'name', 'recipe_id']);
 
         // Pinned lists — respect family visibility
         $pinnedListsQuery = $linkedMember
-            ? FamilyList::where('is_pinned', true)->where(function ($query) use ($user, $linkedMember) {
+            ? FamilyList::where('is_pinned', true)->where(function ($query) use ($user, $linkedMember, $ownerId) {
                 $query->where('user_id', $user->id)
-                    ->orWhere(function ($q) use ($linkedMember) {
-                        $q->where('user_id', $linkedMember->user_id)
+                    ->orWhere(function ($q) use ($linkedMember, $ownerId) {
+                        $q->where('user_id', $ownerId)
                             ->where(function ($vis) use ($linkedMember) {
                                 $vis->where('visibility', ListVisibility::Everyone->value)
                                     ->when($linkedMember->role?->value === 'parent', fn ($q) => $q->orWhere('visibility', ListVisibility::Parents->value))

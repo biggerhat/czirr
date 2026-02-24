@@ -70,6 +70,27 @@ class User extends Authenticatable
         return $this->hasMany(FamilyMember::class);
     }
 
+    /**
+     * Get the FamilyMember record linking this user into another user's family.
+     * Returns null if the user IS the family owner (not linked elsewhere).
+     */
+    public function linkedFamilyMember(): ?FamilyMember
+    {
+        return FamilyMember::where('linked_user_id', $this->id)
+            ->where('user_id', '!=', $this->id)
+            ->first();
+    }
+
+    /**
+     * Resolve the family owner's user ID.
+     * For family owners this returns their own ID; for linked members it
+     * returns the ID of the user who owns the family.
+     */
+    public function familyOwnerId(): int
+    {
+        return $this->linkedFamilyMember()?->user_id ?? $this->id;
+    }
+
     public function budgetCategories(): HasMany
     {
         return $this->hasMany(BudgetCategory::class);

@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Models\Contact;
-use App\Models\FamilyMember;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -16,13 +15,7 @@ class ContactController extends Controller
     {
         $user = $request->user();
         $search = $request->query('search', '');
-        $ownerId = $user->id;
-
-        // If user is a linked family member, show the family owner's contacts
-        $linkedMember = FamilyMember::where('linked_user_id', $user->id)->first();
-        if ($linkedMember) {
-            $ownerId = $linkedMember->user_id;
-        }
+        $ownerId = $user->familyOwnerId();
 
         $query = Contact::where('user_id', $ownerId)->orderBy('last_name')->orderBy('first_name');
 

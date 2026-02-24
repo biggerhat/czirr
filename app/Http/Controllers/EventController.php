@@ -25,7 +25,7 @@ class EventController extends Controller
         $start = Carbon::parse($request->input('start'), $timezone)->utc();
         $end = Carbon::parse($request->input('end'), $timezone)->utc();
 
-        $userId = $request->user()->id;
+        $userId = $request->user()->familyOwnerId();
 
         $version = Cache::get("calendar:v:{$userId}", 0);
         $cacheKey = "calendar:{$userId}:{$version}:".md5("{$start->timestamp}:{$end->timestamp}");

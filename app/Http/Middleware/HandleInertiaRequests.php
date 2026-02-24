@@ -2,7 +2,6 @@
 
 namespace App\Http\Middleware;
 
-use App\Models\FamilyMember;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -46,7 +45,8 @@ class HandleInertiaRequests extends Middleware
             ],
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
             'familyRole' => fn () => $user
-                ? FamilyMember::where('linked_user_id', $user->id)->first()?->role?->value
+                ? ($user->linkedFamilyMember()?->role?->value
+                    ?? $user->familyMembers()->where('linked_user_id', $user->id)->first()?->role?->value)
                 : null,
             'permissions' => fn () => $user
                 ? $user->getAllPermissions()->pluck('name')->toArray()
