@@ -1,17 +1,9 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Checkbox } from '@/components/ui/checkbox';
-import {
-    Sheet,
-    SheetContent,
-    SheetFooter,
-    SheetHeader,
-    SheetTitle,
-} from '@/components/ui/sheet';
 import {
     Select,
     SelectContent,
@@ -19,6 +11,14 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
+import {
+    Sheet,
+    SheetContent,
+    SheetFooter,
+    SheetHeader,
+    SheetTitle,
+} from '@/components/ui/sheet';
+import { Textarea } from '@/components/ui/textarea';
 import type { Bill, BudgetCategory } from '@/types/budgeting';
 
 const props = defineProps<{
@@ -40,7 +40,7 @@ const name = ref('');
 const amount = ref('');
 const categoryId = ref('');
 const startDate = ref('');
-const frequency = ref<'monthly' | 'quarterly' | 'yearly'>('monthly');
+const frequency = ref<'once' | 'weekly' | 'biweekly' | 'monthly' | 'quarterly' | 'yearly'>('monthly');
 const notes = ref('');
 const isActive = ref(true);
 
@@ -219,6 +219,9 @@ async function save() {
                                 <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
+                                <SelectItem value="once">Once</SelectItem>
+                                <SelectItem value="weekly">Weekly</SelectItem>
+                                <SelectItem value="biweekly">Biweekly</SelectItem>
                                 <SelectItem value="monthly">Monthly</SelectItem>
                                 <SelectItem value="quarterly">Quarterly</SelectItem>
                                 <SelectItem value="yearly">Yearly</SelectItem>

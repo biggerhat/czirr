@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import type { CalendarEvent } from '@/types/calendar';
 import { toLocalDateString } from '@/lib/calendar';
+import type { CalendarEvent } from '@/types/calendar';
 import CalendarEventChip from './CalendarEventChip.vue';
 
 const MAX_VISIBLE = 3;

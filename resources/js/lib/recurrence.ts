@@ -1,4 +1,5 @@
-import { RRule, Weekday } from 'rrule';
+import type { Weekday } from 'rrule';
+import { RRule } from 'rrule';
 
 export type RecurrenceFrequency = 'none' | 'daily' | 'weekly' | 'monthly' | 'yearly';
 export type RecurrenceEndType = 'never' | 'until' | 'count';

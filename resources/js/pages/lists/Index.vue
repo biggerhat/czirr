@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import { ref } from 'vue';
 import { Link, router } from '@inertiajs/vue3';
-import AppLayout from '@/layouts/AppLayout.vue';
+import { Pencil, Pin, PinOff, Plus, ShoppingCart, ShoppingBag, CheckSquare, Heart, List, Trash2 } from 'lucide-vue-next';
+import { ref } from 'vue';
 import ListModal from '@/components/lists/ListModal.vue';
-import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import {
     Dialog,
     DialogContent,
@@ -13,13 +13,13 @@ import {
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog';
-import { Pencil, Pin, PinOff, Plus, ShoppingCart, ShoppingBag, CheckSquare, Heart, List, Trash2 } from 'lucide-vue-next';
+import AppLayout from '@/layouts/AppLayout.vue';
 import type { BreadcrumbItem } from '@/types';
 import type { FamilyMember } from '@/types/calendar';
 import type { FamilyList, ListType } from '@/types/lists';
 import { LIST_TYPE_LABELS, LIST_VISIBILITY_LABELS } from '@/types/lists';
 
-const props = defineProps<{
+defineProps<{
     lists: FamilyList[];
     familyMembers: FamilyMember[];
 }>();

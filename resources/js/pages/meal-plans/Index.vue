@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue';
 import { Link, router } from '@inertiajs/vue3';
-import AppLayout from '@/layouts/AppLayout.vue';
+import { ChevronLeft, ChevronRight, Clock, CookingPot, ExternalLink, Pencil, Plus, Printer, ShoppingCart, Timer, Trash2, Users } from 'lucide-vue-next';
+import { ref, computed } from 'vue';
 import MealPlanEntryModal from '@/components/meal-plans/MealPlanEntryModal.vue';
-import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import {
     Dialog,
     DialogContent,
@@ -13,8 +13,8 @@ import {
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog';
-import { ChevronLeft, ChevronRight, Clock, CookingPot, ExternalLink, Pencil, Plus, Printer, ShoppingCart, Timer, Trash2, Users } from 'lucide-vue-next';
 import { useSwipe } from '@/composables/useSwipe';
+import AppLayout from '@/layouts/AppLayout.vue';
 import type { BreadcrumbItem } from '@/types';
 import type { CustomMeal, MealPlanEntry, MealType } from '@/types/meal-plans';
 import { MEAL_TYPE_LABELS, MEAL_TYPES } from '@/types/meal-plans';

@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import { ref } from 'vue';
 import { Link, router } from '@inertiajs/vue3';
-import AppLayout from '@/layouts/AppLayout.vue';
+import { Pencil, Plus, Trash2 } from 'lucide-vue-next';
+import { ref } from 'vue';
 import CookbookModal from '@/components/recipes/CookbookModal.vue';
-import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import {
     Dialog,
     DialogContent,
@@ -13,13 +13,13 @@ import {
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog';
-import { Pencil, Plus, Trash2 } from 'lucide-vue-next';
+import AppLayout from '@/layouts/AppLayout.vue';
 import type { BreadcrumbItem } from '@/types';
 import type { FamilyMember } from '@/types/calendar';
 import type { Cookbook } from '@/types/recipes';
 import { COOKBOOK_VISIBILITY_LABELS } from '@/types/recipes';
 
-const props = defineProps<{
+defineProps<{
     cookbooks: Cookbook[];
     familyMembers: FamilyMember[];
     can: {

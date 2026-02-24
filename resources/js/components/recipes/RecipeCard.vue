@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { Badge } from '@/components/ui/badge';
 import { Clock, Users } from 'lucide-vue-next';
+import { Badge } from '@/components/ui/badge';
 import type { Recipe } from '@/types/recipes';
 import { DIFFICULTY_LABELS, DIFFICULTY_COLORS } from '@/types/recipes';
 

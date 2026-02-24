@@ -43,12 +43,12 @@ class Income extends Model
         return $this->belongsTo(Event::class);
     }
 
-    public function hasOccurrenceInRange(Carbon $start, Carbon $end): bool
+    public function occurrencesInRange(Carbon $start, Carbon $end): int
     {
         $incomeStart = $this->start_date;
 
         if ($this->frequency === 'once') {
-            return $incomeStart->between($start, $end);
+            return $incomeStart->between($start, $end) ? 1 : 0;
         }
 
         // Weekly / biweekly
@@ -56,19 +56,22 @@ class Income extends Model
             $intervalDays = $this->frequency === 'weekly' ? 7 : 14;
 
             if ($incomeStart->gt($end)) {
-                return false;
-            }
-
-            if ($incomeStart->gte($start)) {
-                return true;
+                return 0;
             }
 
             // Find first occurrence on or after range start
-            $daysDiff = $incomeStart->diffInDays($start);
-            $periods = (int) ceil($daysDiff / $intervalDays);
-            $first = $incomeStart->copy()->addDays($periods * $intervalDays);
+            $first = $incomeStart->copy();
+            if ($first->lt($start)) {
+                $daysDiff = $incomeStart->diffInDays($start);
+                $periods = (int) ceil($daysDiff / $intervalDays);
+                $first = $incomeStart->copy()->addDays($periods * $intervalDays);
+            }
 
-            return $first->lte($end);
+            if ($first->gt($end)) {
+                return 0;
+            }
+
+            return (int) floor($first->diffInDays($end) / $intervalDays) + 1;
         }
 
         // Monthly / quarterly / yearly
@@ -79,6 +82,7 @@ class Income extends Model
         };
 
         $payDay = $incomeStart->day;
+        $count = 0;
         $current = $start->copy()->startOfMonth();
 
         while ($current->lte($end)) {
@@ -90,7 +94,7 @@ class Income extends Model
                     $occDate = $current->copy()->day($day);
 
                     if ($occDate->between($start, $end)) {
-                        return true;
+                        $count++;
                     }
                 }
             }
@@ -98,6 +102,11 @@ class Income extends Model
             $current->addMonth();
         }
 
-        return false;
+        return $count;
+    }
+
+    public function hasOccurrenceInRange(Carbon $start, Carbon $end): bool
+    {
+        return $this->occurrencesInRange($start, $end) > 0;
     }
 }

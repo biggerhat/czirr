@@ -1,15 +1,13 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue';
 import { router } from '@inertiajs/vue3';
-import AppLayout from '@/layouts/AppLayout.vue';
-import BudgetToolbar from '@/components/budgeting/BudgetToolbar.vue';
+import { CalendarRange, Check, DollarSign, LayoutGrid, List, Pencil, Plus, Receipt, Trash2, X } from 'lucide-vue-next';
+import { ref, computed } from 'vue';
 import BillModal from '@/components/budgeting/BillModal.vue';
+import BudgetToolbar from '@/components/budgeting/BudgetToolbar.vue';
 import ExpenseModal from '@/components/budgeting/ExpenseModal.vue';
 import IncomeModal from '@/components/budgeting/IncomeModal.vue';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
     Dialog,
     DialogContent,
@@ -18,8 +16,10 @@ import {
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import AppLayout from '@/layouts/AppLayout.vue';
 import { EVENT_COLORS } from '@/lib/calendar';
-import { CalendarRange, Check, DollarSign, LayoutGrid, List, Pencil, Plus, Receipt, Trash2, X } from 'lucide-vue-next';
 import type { BreadcrumbItem } from '@/types';
 import type { Bill, BudgetCategory, Expense, Income } from '@/types/budgeting';
 
@@ -86,17 +86,12 @@ function clearDateRange() {
     router.visit(`/budgeting?month=${props.month}`, { preserveState: false });
 }
 
-// Monthly occurrence multipliers
-function monthlyMultiplier(frequency: string): number {
-    return ({ weekly: 4, biweekly: 2 } as Record<string, number>)[frequency] ?? 1;
-}
-
 // Summary computations
-const totalBills = computed(() => props.bills.reduce((sum, b) => sum + Number(b.amount), 0));
+const totalBills = computed(() => props.bills.reduce((sum, b) => sum + Number(b.amount) * (b.occurrences_in_range ?? 1), 0));
 const totalPaid = computed(() => props.bills.filter(b => b.is_paid_this_month).reduce((sum, b) => sum + Number(b.amount), 0));
 const totalUnpaid = computed(() => totalBills.value - totalPaid.value);
 const totalExpenses = computed(() => props.expenses.reduce((sum, e) => sum + Number(e.amount), 0));
-const totalIncome = computed(() => props.incomes.filter(i => i.is_active).reduce((sum, i) => sum + Number(i.amount) * monthlyMultiplier(i.frequency), 0));
+const totalIncome = computed(() => props.incomes.filter(i => i.is_active).reduce((sum, i) => sum + Number(i.amount) * (i.occurrences_in_range ?? 1), 0));
 const netBalance = computed(() => totalIncome.value - totalBills.value - totalExpenses.value);
 
 // Bill category filter & grouping
@@ -440,7 +435,7 @@ function getCategoryDotClass(category: BudgetCategory): string {
                         <div class="flex items-center gap-2 mb-2">
                             <span class="h-2.5 w-2.5 shrink-0 rounded-full" :class="getCategoryDotClass(group.category)" />
                             <span class="text-sm font-medium text-muted-foreground">{{ group.category.name }}</span>
-                            <span class="text-xs text-muted-foreground">({{ formatCurrency(group.bills.reduce((s, b) => s + Number(b.amount), 0)) }})</span>
+                            <span class="text-xs text-muted-foreground">({{ formatCurrency(group.bills.reduce((s, b) => s + Number(b.amount) * (b.occurrences_in_range ?? 1), 0)) }})</span>
                         </div>
                         <div class="space-y-2">
                             <div

@@ -1,10 +1,10 @@
 <script setup lang="ts">
+import { Head } from '@inertiajs/vue3';
+import { Pencil, Trash2, Plus, Check, X, Link as LinkIcon, Unlink as UnlinkIcon, Lock, Shield } from 'lucide-vue-next';
 import { ref, computed } from 'vue';
-import { Head, router } from '@inertiajs/vue3';
-import AppLayout from '@/layouts/AppLayout.vue';
 import Heading from '@/components/Heading.vue';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
     Dialog,
     DialogContent,
@@ -13,6 +13,7 @@ import {
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
 import {
     Select,
     SelectContent,
@@ -20,11 +21,10 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Pencil, Trash2, Plus, Check, X, Link as LinkIcon, Unlink as UnlinkIcon, Lock, Shield } from 'lucide-vue-next';
+import AppLayout from '@/layouts/AppLayout.vue';
+import { EVENT_COLORS } from '@/lib/calendar';
 import type { BreadcrumbItem } from '@/types';
 import type { EventColor, FamilyMember } from '@/types/calendar';
-import { EVENT_COLORS } from '@/lib/calendar';
 
 type LinkableUser = {
     id: number;

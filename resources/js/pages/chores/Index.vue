@@ -1,12 +1,10 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue';
 import { router } from '@inertiajs/vue3';
-import AppLayout from '@/layouts/AppLayout.vue';
-import ChoreModal from '@/components/chores/ChoreModal.vue';
-import CellPicker from '@/components/chores/CellPicker.vue';
-import { Button } from '@/components/ui/button';
 import { CalendarDays, ChevronLeft, ChevronRight, Grid3X3, Pencil, Plus, Printer, Trash2 } from 'lucide-vue-next';
-import { useSwipe } from '@/composables/useSwipe';
+import { ref, computed } from 'vue';
+import CellPicker from '@/components/chores/CellPicker.vue';
+import ChoreModal from '@/components/chores/ChoreModal.vue';
+import { Button } from '@/components/ui/button';
 import {
     Dialog,
     DialogContent,
@@ -15,6 +13,8 @@ import {
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog';
+import { useSwipe } from '@/composables/useSwipe';
+import AppLayout from '@/layouts/AppLayout.vue';
 import { EVENT_COLORS } from '@/lib/calendar';
 import type { BreadcrumbItem } from '@/types';
 import type { FamilyMember } from '@/types/calendar';

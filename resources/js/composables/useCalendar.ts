@@ -1,6 +1,6 @@
 import { ref, computed, watch } from 'vue';
-import type { CalendarEvent, CalendarView, EditMode } from '@/types/calendar';
 import { toLocalDateString } from '@/lib/calendar';
+import type { CalendarEvent, CalendarView, EditMode } from '@/types/calendar';
 
 export function useCalendar() {
     const view = ref<CalendarView>('month');

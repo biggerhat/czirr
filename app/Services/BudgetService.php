@@ -130,7 +130,12 @@ class BudgetService
             ->with('category')
             ->orderBy('start_date')
             ->get()
-            ->filter(fn (Bill $bill) => $bill->isDueInRange($start, $end))
+            ->map(function (Bill $bill) use ($start, $end) {
+                $bill->setAttribute('occurrences_in_range', $bill->occurrencesInRange($start, $end));
+
+                return $bill;
+            })
+            ->filter(fn (Bill $bill) => $bill->getAttribute('occurrences_in_range') > 0)
             ->map(function (Bill $bill) use ($start, $end) {
                 $bill->setAttribute('is_paid_this_month', $bill->isPaidForRange($start, $end));
 
@@ -147,7 +152,12 @@ class BudgetService
         $incomes = $user->incomes()
             ->orderBy('start_date')
             ->get()
-            ->filter(fn (Income $income) => $income->hasOccurrenceInRange($start, $end))
+            ->map(function (Income $income) use ($start, $end) {
+                $income->setAttribute('occurrences_in_range', $income->occurrencesInRange($start, $end));
+
+                return $income;
+            })
+            ->filter(fn (Income $income) => $income->getAttribute('occurrences_in_range') > 0)
             ->values();
 
         $categories = $user->budgetCategories()
@@ -169,7 +179,7 @@ class BudgetService
     private function createEventForBill(User $user, Bill $bill): void
     {
         $startsAt = $bill->start_date->copy()->midDay();
-        $rrule = $this->buildRRule($bill->frequency, $bill->start_date->day);
+        $rrule = $this->buildRRule($bill->frequency, $bill->start_date->day, $startsAt);
 
         $event = Event::create([
             'user_id' => $user->id,
@@ -193,7 +203,7 @@ class BudgetService
         }
 
         $startsAt = $bill->start_date->copy()->midDay();
-        $rrule = $this->buildRRule($bill->frequency, $bill->start_date->day);
+        $rrule = $this->buildRRule($bill->frequency, $bill->start_date->day, $startsAt);
 
         $event->update([
             'title' => "{$bill->name} due",
@@ -240,11 +250,12 @@ class BudgetService
         ]);
     }
 
-    private function buildRRule(string $frequency, int $dueDay): string
+    private function buildRRule(string $frequency, int $dueDay, CarbonInterface $startsAt): ?string
     {
-        // BYMONTHDAY pins recurrence to the exact day-of-month regardless of
-        // timezone shifts applied to DTSTART during expansion.
         return match ($frequency) {
+            'once' => null,
+            'weekly' => 'FREQ=WEEKLY;BYDAY='.strtoupper(substr($startsAt->englishDayOfWeek, 0, 2)),
+            'biweekly' => 'FREQ=WEEKLY;INTERVAL=2;BYDAY='.strtoupper(substr($startsAt->englishDayOfWeek, 0, 2)),
             'monthly' => "FREQ=MONTHLY;BYMONTHDAY={$dueDay}",
             'quarterly' => "FREQ=MONTHLY;INTERVAL=3;BYMONTHDAY={$dueDay}",
             'yearly' => "FREQ=YEARLY;BYMONTHDAY={$dueDay}",

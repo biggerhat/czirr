@@ -20,7 +20,7 @@ class BillController extends Controller
             'amount' => ['required', 'numeric', 'min:0'],
             'budget_category_id' => ['required', 'exists:budget_categories,id'],
             'start_date' => ['required', 'date'],
-            'frequency' => ['required', 'string', 'in:monthly,quarterly,yearly'],
+            'frequency' => ['required', 'string', 'in:once,weekly,biweekly,monthly,quarterly,yearly'],
             'is_active' => ['boolean'],
             'notes' => ['nullable', 'string'],
         ]);
@@ -41,7 +41,7 @@ class BillController extends Controller
             'amount' => ['required', 'numeric', 'min:0'],
             'budget_category_id' => ['required', 'exists:budget_categories,id'],
             'start_date' => ['required', 'date'],
-            'frequency' => ['required', 'string', 'in:monthly,quarterly,yearly'],
+            'frequency' => ['required', 'string', 'in:once,weekly,biweekly,monthly,quarterly,yearly'],
             'is_active' => ['boolean'],
             'notes' => ['nullable', 'string'],
         ]);

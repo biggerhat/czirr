@@ -1,10 +1,10 @@
 <script setup lang="ts">
+import { Search } from 'lucide-vue-next';
 import { ref, computed, watch } from 'vue';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Badge } from '@/components/ui/badge';
 import {
     Select,
     SelectContent,
@@ -19,7 +19,7 @@ import {
     SheetHeader,
     SheetTitle,
 } from '@/components/ui/sheet';
-import { Search } from 'lucide-vue-next';
+import { Textarea } from '@/components/ui/textarea';
 import type { CustomMeal, MealPlanEntry, MealType } from '@/types/meal-plans';
 import { MEAL_TYPE_LABELS, MEAL_TYPES } from '@/types/meal-plans';
 import type { Recipe } from '@/types/recipes';
@@ -43,8 +43,8 @@ const isSaving = ref(false);
 const errors = ref<Record<string, string[]>>({});
 
 // Form fields
-const date = ref('');
-const mealType = ref<MealType>('dinner');
+const formDate = ref('');
+const formMealType = ref<MealType>('dinner');
 const recipeId = ref<number | null>(null);
 const name = ref('');
 const description = ref('');
@@ -71,15 +71,15 @@ watch(() => props.open, (open) => {
     customSearch.value = '';
 
     if (props.entry) {
-        date.value = props.entry.date;
-        mealType.value = props.entry.meal_type;
+        formDate.value = props.entry.date;
+        formMealType.value = props.entry.meal_type;
         recipeId.value = props.entry.recipe_id;
         name.value = props.entry.name;
         description.value = props.entry.description ?? '';
         useRecipe.value = !!props.entry.recipe_id;
     } else {
-        date.value = props.date ?? '';
-        mealType.value = props.mealType ?? 'dinner';
+        formDate.value = props.date ?? '';
+        formMealType.value = props.mealType ?? 'dinner';
         recipeId.value = null;
         name.value = '';
         description.value = '';
@@ -109,8 +109,8 @@ async function save() {
     errors.value = {};
 
     const body = {
-        date: date.value,
-        meal_type: mealType.value,
+        date: formDate.value,
+        meal_type: formMealType.value,
         recipe_id: useRecipe.value ? recipeId.value : null,
         name: name.value,
         description: description.value || null,
@@ -162,14 +162,14 @@ async function save() {
                     <!-- Date -->
                     <div class="space-y-2">
                         <Label for="entry-date">Date</Label>
-                        <Input id="entry-date" v-model="date" type="date" required />
+                        <Input id="entry-date" v-model="formDate" type="date" required />
                         <p v-if="errors.date" class="text-sm text-destructive">{{ errors.date[0] }}</p>
                     </div>
 
                     <!-- Meal type -->
                     <div class="space-y-2">
                         <Label>Meal</Label>
-                        <Select v-model="mealType">
+                        <Select v-model="formMealType">
                             <SelectTrigger>
                                 <SelectValue />
                             </SelectTrigger>

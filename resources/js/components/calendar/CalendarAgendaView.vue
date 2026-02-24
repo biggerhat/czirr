@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import type { CalendarEvent } from '@/types/calendar';
 import { formatEventTime, formatEventDateFull, EVENT_COLORS, getEventColor, toLocalDateString } from '@/lib/calendar';
+import type { CalendarEvent } from '@/types/calendar';
 
 const props = defineProps<{
     currentDate: Date;

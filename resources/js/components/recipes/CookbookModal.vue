@@ -1,10 +1,9 @@
 <script setup lang="ts">
+import { Check } from 'lucide-vue-next';
 import { ref, computed, watch } from 'vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Check } from 'lucide-vue-next';
 import {
     Select,
     SelectContent,
@@ -19,8 +18,9 @@ import {
     SheetHeader,
     SheetTitle,
 } from '@/components/ui/sheet';
-import type { Cookbook, CookbookVisibility } from '@/types/recipes';
+import { Textarea } from '@/components/ui/textarea';
 import type { FamilyMember } from '@/types/calendar';
+import type { Cookbook, CookbookVisibility } from '@/types/recipes';
 import { COOKBOOK_VISIBILITY_LABELS } from '@/types/recipes';
 
 const props = defineProps<{
