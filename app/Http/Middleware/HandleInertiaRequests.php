@@ -54,6 +54,7 @@ class HandleInertiaRequests extends Middleware
             'userRole' => fn () => $user
                 ? $user->getRoleNames()->first()
                 : null,
+            'vapidPublicKey' => config('webpush.vapid.public_key'),
         ];
     }
 }

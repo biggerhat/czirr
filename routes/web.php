@@ -18,6 +18,7 @@ use App\Http\Controllers\FamilyListItemController;
 use App\Http\Controllers\FamilyMemberController;
 use App\Http\Controllers\IncomeController;
 use App\Http\Controllers\MealPlanController;
+use App\Http\Controllers\PushSubscriptionController;
 use App\Http\Controllers\RecipeController;
 use App\Http\Controllers\RecipeTagController;
 use App\Http\Controllers\RoleController;
@@ -40,6 +41,10 @@ Route::get('/dashboard', [DashboardController::class, 'index'])
     ->middleware(['auth', 'verified', 'family'])->name('dashboard');
 
 Route::middleware(['auth', 'verified', 'family'])->group(function () {
+    // Push subscriptions
+    Route::post('push-subscriptions', [PushSubscriptionController::class, 'store']);
+    Route::delete('push-subscriptions', [PushSubscriptionController::class, 'destroy']);
+
     // Calendar (no specific permission — all authenticated family members can view)
     Route::get('calendar', [CalendarController::class, 'index'])->name('calendar.index');
 

@@ -25,6 +25,9 @@ export default defineConfig({
             },
         }),
         VitePWA({
+            strategies: 'injectManifest',
+            srcDir: 'resources/js',
+            filename: 'sw.ts',
             registerType: 'autoUpdate',
             injectRegister: false,
             buildBase: '/',
@@ -61,66 +64,8 @@ export default defineConfig({
                     },
                 ],
             },
-            workbox: {
-                navigateFallback: '/offline',
-                navigateFallbackDenylist: [/^\/api/, /^\/sanctum/, /^\/_ignition/, /^\/telescope/],
-                runtimeCaching: [
-                    {
-                        urlPattern: ({ request }) => request.mode === 'navigate',
-                        handler: 'NetworkFirst',
-                        options: {
-                            cacheName: 'pages',
-                            networkTimeoutSeconds: 3,
-                            expiration: {
-                                maxAgeSeconds: 24 * 60 * 60,
-                            },
-                        },
-                    },
-                    {
-                        urlPattern: ({ request }) =>
-                            request.headers.get('X-Inertia') === 'true',
-                        handler: 'NetworkFirst',
-                        options: {
-                            cacheName: 'inertia-responses',
-                            networkTimeoutSeconds: 3,
-                            expiration: {
-                                maxAgeSeconds: 60 * 60,
-                            },
-                        },
-                    },
-                    {
-                        urlPattern: /^https:\/\/fonts\.bunny\.net\/css/,
-                        handler: 'CacheFirst',
-                        options: {
-                            cacheName: 'bunny-font-stylesheets',
-                            expiration: {
-                                maxAgeSeconds: 365 * 24 * 60 * 60,
-                            },
-                        },
-                    },
-                    {
-                        urlPattern: /^https:\/\/fonts\.bunny\.net\/.*\.(woff2?|ttf|otf|eot)$/,
-                        handler: 'CacheFirst',
-                        options: {
-                            cacheName: 'bunny-font-files',
-                            expiration: {
-                                maxAgeSeconds: 365 * 24 * 60 * 60,
-                                maxEntries: 30,
-                            },
-                        },
-                    },
-                    {
-                        urlPattern: /\.(?:png|jpg|jpeg|svg|gif|webp|ico)$/,
-                        handler: 'CacheFirst',
-                        options: {
-                            cacheName: 'images',
-                            expiration: {
-                                maxAgeSeconds: 30 * 24 * 60 * 60,
-                                maxEntries: 100,
-                            },
-                        },
-                    },
-                ],
+            injectManifest: {
+                globPatterns: ['**/*.{js,css,html,ico,png,svg,webp,woff2}'],
             },
         }),
     ],

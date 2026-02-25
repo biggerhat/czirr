@@ -22,6 +22,7 @@ declare module '@inertiajs/core' {
             familyRole: 'parent' | 'child' | null;
             permissions: string[];
             userRole: string | null;
+            vapidPublicKey: string | null;
             [key: string]: unknown;
         };
     }

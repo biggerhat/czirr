@@ -3,9 +3,13 @@
 namespace App\Http\Controllers;
 
 use App\Enums\ListVisibility;
+use App\Enums\NotificationType;
+use App\Enums\Permission;
 use App\Models\FamilyList;
 use App\Models\FamilyListItem;
 use App\Models\FamilyMember;
+use App\Models\User;
+use App\Notifications\ListItemAddedNotification;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -29,6 +33,8 @@ class FamilyListItemController extends Controller
             'notes' => $validated['notes'] ?? null,
             'position' => $maxPosition + 1,
         ]);
+
+        $this->notifyListUsers($request->user(), $familyList, $item);
 
         return response()->json($item, 201);
     }
@@ -76,6 +82,50 @@ class FamilyListItemController extends Controller
         $familyListItem->delete();
 
         return response()->json(null, 204);
+    }
+
+    private function notifyListUsers(User $actingUser, FamilyList $familyList, FamilyListItem $item): void
+    {
+        $listOwnerId = $familyList->user_id;
+        $visibility = $familyList->visibility;
+
+        // Collect all user IDs who can see this list
+        $userIds = collect([$listOwnerId]);
+
+        $familyMembers = FamilyMember::where('user_id', $listOwnerId)
+            ->whereNotNull('linked_user_id')
+            ->get();
+
+        foreach ($familyMembers as $member) {
+            if ($visibility === ListVisibility::Everyone) {
+                $userIds->push($member->linked_user_id);
+            } elseif ($visibility === ListVisibility::Parents && $member->role?->value === 'parent') {
+                $userIds->push($member->linked_user_id);
+            } elseif ($visibility === ListVisibility::Children && $member->role?->value === 'child') {
+                $userIds->push($member->linked_user_id);
+            } elseif ($visibility === ListVisibility::Specific) {
+                if ($familyList->members()->where('family_member_id', $member->id)->exists()) {
+                    $userIds->push($member->linked_user_id);
+                }
+            }
+        }
+
+        // Exclude the acting user
+        $userIds = $userIds->unique()->reject(fn ($id) => $id === $actingUser->id);
+
+        if ($userIds->isEmpty()) {
+            return;
+        }
+
+        User::whereIn('id', $userIds)
+            ->whereHas('pushSubscriptions')
+            ->with('notificationPreferences')
+            ->get()
+            ->filter(fn (User $user) => $user->can(Permission::ListsView->value))
+            ->filter(fn (User $user) => $user->wantsPushNotification(NotificationType::ListItemAdded))
+            ->each(fn (User $user) => $user->notify(
+                new ListItemAddedNotification($item, $familyList, $actingUser->name),
+            ));
     }
 
     private function authorizeListAccess(Request $request, FamilyList $familyList): void

@@ -40,7 +40,8 @@
       "Bash(npm uninstall:*)",
       "WebFetch(domain:inertiajs.com)",
       "WebFetch(domain:v2.inertiajs.com)",
-      "Bash(sail bin phpstan:*)"
+      "Bash(sail bin phpstan:*)",
+      "Bash(vendor/bin/pint:*)"
     ]
   }
 }
