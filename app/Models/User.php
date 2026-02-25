@@ -70,15 +70,27 @@ class User extends Authenticatable
         return $this->hasMany(FamilyMember::class);
     }
 
+    private bool $linkedFamilyMemberResolved = false;
+
+    private ?FamilyMember $linkedFamilyMemberCache = null;
+
     /**
      * Get the FamilyMember record linking this user into another user's family.
      * Returns null if the user IS the family owner (not linked elsewhere).
+     *
+     * Result is cached per-instance so repeated calls within the same request
+     * (e.g. familyOwnerId(), familyOwner(), middleware) only hit the DB once.
      */
     public function linkedFamilyMember(): ?FamilyMember
     {
-        return FamilyMember::where('linked_user_id', $this->id)
-            ->where('user_id', '!=', $this->id)
-            ->first();
+        if (! $this->linkedFamilyMemberResolved) {
+            $this->linkedFamilyMemberCache = FamilyMember::where('linked_user_id', $this->id)
+                ->where('user_id', '!=', $this->id)
+                ->first();
+            $this->linkedFamilyMemberResolved = true;
+        }
+
+        return $this->linkedFamilyMemberCache;
     }
 
     /**

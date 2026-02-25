@@ -466,6 +466,8 @@ class DatabaseSeeder extends Seeder
         }
 
         // --- Chore Completions (past 5 days for streak/weekly score demo) ---
+        $choresByIdMap = $chores->keyBy('id');
+
         for ($d = 5; $d >= 1; $d--) {
             $date = $today->copy()->subDays($d);
             $dow = $date->dayOfWeek;
@@ -474,12 +476,11 @@ class DatabaseSeeder extends Seeder
                 if ($assignment->day_of_week === $dow) {
                     // ~80% completion rate to show realistic data
                     if (fake()->boolean(80)) {
-                        $chore = $chores->firstWhere('id', $assignment->chore_id);
                         ChoreCompletion::create([
                             'chore_assignment_id' => $assignment->id,
                             'family_member_id' => $assignment->family_member_id,
                             'completed_date' => $date->toDateString(),
-                            'points_earned' => $chore->points,
+                            'points_earned' => $choresByIdMap[$assignment->chore_id]->points,
                         ]);
                     }
                 }

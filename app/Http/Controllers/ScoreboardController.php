@@ -26,16 +26,13 @@ class ScoreboardController extends Controller
             : Carbon::now()->startOfWeek(Carbon::MONDAY);
 
         // Seed default streak bonuses if none exist
-        if (StreakBonus::where('user_id', $ownerId)->count() === 0) {
-            $defaults = [
-                ['days_required' => 3, 'bonus_points' => 5],
-                ['days_required' => 7, 'bonus_points' => 15],
-                ['days_required' => 14, 'bonus_points' => 30],
-                ['days_required' => 30, 'bonus_points' => 75],
-            ];
-            foreach ($defaults as $default) {
-                StreakBonus::create([...$default, 'user_id' => $ownerId]);
-            }
+        if (! StreakBonus::where('user_id', $ownerId)->exists()) {
+            StreakBonus::insert([
+                ['user_id' => $ownerId, 'days_required' => 3, 'bonus_points' => 5, 'created_at' => now(), 'updated_at' => now()],
+                ['user_id' => $ownerId, 'days_required' => 7, 'bonus_points' => 15, 'created_at' => now(), 'updated_at' => now()],
+                ['user_id' => $ownerId, 'days_required' => 14, 'bonus_points' => 30, 'created_at' => now(), 'updated_at' => now()],
+                ['user_id' => $ownerId, 'days_required' => 30, 'bonus_points' => 75, 'created_at' => now(), 'updated_at' => now()],
+            ]);
         }
 
         $scoreboard = $this->scoreService->getScoreboard($ownerId, $weekStart);

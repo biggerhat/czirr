@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Enums\ListVisibility;
 use App\Models\Bill;
 use App\Models\ChoreAssignment;
+use App\Models\Expense;
 use App\Models\FamilyList;
 use App\Models\MealPlanEntry;
 use App\Services\ChoreScoreService;
@@ -37,15 +38,27 @@ class DashboardController extends Controller
                 ->where('is_active', true)
                 ->get();
 
-            $todaysBills = $bills->map(function (Bill $bill) use ($today) {
+            $dueTodayBills = $bills->map(function (Bill $bill) use ($today) {
                 $bill->setAttribute('next_due_date', $bill->nextDueDate($today)->toDateString());
-                $bill->setAttribute('is_paid_this_month', $bill->isPaidForMonth($today));
 
                 return $bill;
-            })
-                ->filter(fn (Bill $bill) => Carbon::parse($bill->getAttribute('next_due_date'))->isSameDay($today))
-                ->sortBy('next_due_date')
-                ->values();
+            })->filter(fn (Bill $bill) => Carbon::parse($bill->getAttribute('next_due_date'))->isSameDay($today));
+
+            // Batch-load payment status (1 query instead of N)
+            $paidBillIds = $dueTodayBills->isNotEmpty()
+                ? Expense::whereIn('bill_id', $dueTodayBills->pluck('id'))
+                    ->whereYear('date', $today->year)
+                    ->whereMonth('date', $today->month)
+                    ->distinct()
+                    ->pluck('bill_id')
+                    ->flip()
+                : collect();
+
+            $todaysBills = $dueTodayBills->map(function (Bill $bill) use ($paidBillIds) {
+                $bill->setAttribute('is_paid_this_month', $paidBillIds->has($bill->id));
+
+                return $bill;
+            })->sortBy('next_due_date')->values();
         }
 
         $todaysChores = collect();

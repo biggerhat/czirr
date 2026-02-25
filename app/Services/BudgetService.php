@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Bill;
 use App\Models\Event;
+use App\Models\Expense;
 use App\Models\Income;
 use App\Models\User;
 use Carbon\Carbon;
@@ -126,18 +127,31 @@ class BudgetService
 
     private function getOverview(User $user, Carbon $start, Carbon $end, string $month): array
     {
-        $bills = $user->bills()
+        $allBills = $user->bills()
             ->with('category')
             ->orderBy('start_date')
-            ->get()
+            ->get();
+
+        $activeBills = $allBills
             ->map(function (Bill $bill) use ($start, $end) {
                 $bill->setAttribute('occurrences_in_range', $bill->occurrencesInRange($start, $end));
 
                 return $bill;
             })
-            ->filter(fn (Bill $bill) => $bill->getAttribute('occurrences_in_range') > 0)
-            ->map(function (Bill $bill) use ($start, $end) {
-                $bill->setAttribute('is_paid_this_month', $bill->isPaidForRange($start, $end));
+            ->filter(fn (Bill $bill) => $bill->getAttribute('occurrences_in_range') > 0);
+
+        // Batch-load which bills have expenses in this range (1 query instead of N)
+        $paidBillIds = $activeBills->isNotEmpty()
+            ? Expense::whereIn('bill_id', $activeBills->pluck('id'))
+                ->whereBetween('date', [$start, $end])
+                ->distinct()
+                ->pluck('bill_id')
+                ->flip()
+            : collect();
+
+        $bills = $activeBills
+            ->map(function (Bill $bill) use ($paidBillIds) {
+                $bill->setAttribute('is_paid_this_month', $paidBillIds->has($bill->id));
 
                 return $bill;
             })
