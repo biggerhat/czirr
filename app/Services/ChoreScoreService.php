@@ -21,15 +21,14 @@ class ChoreScoreService
         $weekEnd = $weekStart->copy()->endOfWeek(Carbon::SUNDAY);
 
         $members = FamilyMember::where('user_id', $ownerId)->get();
+        $memberIds = $members->pluck('id');
 
-        // Chore completion points per member this week
-        $chorePoints = ChoreCompletion::whereIn('family_member_id', $members->pluck('id'))
+        $chorePoints = ChoreCompletion::whereIn('family_member_id', $memberIds)
             ->whereBetween('completed_date', [$weekStart->toDateString(), $weekEnd->toDateString()])
             ->selectRaw('family_member_id, SUM(points_earned) as total')
             ->groupBy('family_member_id')
             ->pluck('total', 'family_member_id');
 
-        // Bonus objective points claimed this week
         $bonusPoints = BonusObjective::where('user_id', $ownerId)
             ->whereNotNull('claimed_by')
             ->whereBetween('claimed_at', [$weekStart, $weekEnd->endOfDay()])
@@ -37,13 +36,14 @@ class ChoreScoreService
             ->groupBy('claimed_by')
             ->pluck('total', 'claimed_by');
 
-        // Streak bonuses
         $milestones = StreakBonus::where('user_id', $ownerId)
             ->orderBy('days_required')
             ->get();
 
-        return $members->map(function (FamilyMember $member) use ($chorePoints, $bonusPoints, $milestones, $ownerId) {
-            $streak = $this->getCurrentStreak($member->id, $ownerId);
+        $streaks = $this->batchCalculateStreaks($members, $ownerId);
+
+        return $members->map(function (FamilyMember $member) use ($chorePoints, $bonusPoints, $milestones, $streaks) {
+            $streak = $streaks[$member->id] ?? 0;
             $streakBonus = $this->getStreakBonusesEarned($streak, $milestones);
 
             return [
@@ -66,7 +66,183 @@ class ChoreScoreService
     {
         $members = FamilyMember::where('user_id', $ownerId)->get();
 
-        $chorePoints = ChoreCompletion::whereIn('family_member_id', $members->pluck('id'))
+        return $this->buildOverallScores($members, $ownerId);
+    }
+
+    /**
+     * Full scoreboard data — optimized to share queries between weekly + overall.
+     */
+    public function getScoreboard(int $ownerId, ?Carbon $weekStart = null): array
+    {
+        $weekStart = ($weekStart ?? Carbon::now())->startOfWeek(Carbon::MONDAY);
+        $weekEnd = $weekStart->copy()->endOfWeek(Carbon::SUNDAY);
+
+        // Shared queries (loaded once)
+        $members = FamilyMember::where('user_id', $ownerId)->get();
+        $memberIds = $members->pluck('id');
+
+        $milestones = StreakBonus::where('user_id', $ownerId)
+            ->orderBy('days_required')
+            ->get();
+
+        // Batch streak calculation (2 queries instead of up to 2920)
+        $streaks = $this->batchCalculateStreaks($members, $ownerId);
+
+        // Weekly chore points
+        $weeklyChorePoints = ChoreCompletion::whereIn('family_member_id', $memberIds)
+            ->whereBetween('completed_date', [$weekStart->toDateString(), $weekEnd->toDateString()])
+            ->selectRaw('family_member_id, SUM(points_earned) as total')
+            ->groupBy('family_member_id')
+            ->pluck('total', 'family_member_id');
+
+        // Weekly bonus points
+        $weeklyBonusPoints = BonusObjective::where('user_id', $ownerId)
+            ->whereNotNull('claimed_by')
+            ->whereBetween('claimed_at', [$weekStart, $weekEnd->endOfDay()])
+            ->selectRaw('claimed_by, SUM(points) as total')
+            ->groupBy('claimed_by')
+            ->pluck('total', 'claimed_by');
+
+        // Build weekly scores
+        $weeklyScores = $members->map(function (FamilyMember $member) use ($weeklyChorePoints, $weeklyBonusPoints, $milestones, $streaks) {
+            $streak = $streaks[$member->id] ?? 0;
+            $streakBonus = $this->getStreakBonusesEarned($streak, $milestones);
+
+            return [
+                'family_member_id' => $member->id,
+                'name' => $member->nickname ?? $member->name,
+                'color' => $member->color,
+                'chore_points' => (int) ($weeklyChorePoints[$member->id] ?? 0),
+                'bonus_points' => (int) ($weeklyBonusPoints[$member->id] ?? 0),
+                'streak_bonus' => $streakBonus,
+                'weekly_total' => (int) ($weeklyChorePoints[$member->id] ?? 0) + (int) ($weeklyBonusPoints[$member->id] ?? 0) + $streakBonus,
+                'streak' => $streak,
+            ];
+        })->sortByDesc('weekly_total')->values()->map(function ($score, $index) {
+            $score['rank'] = $index + 1;
+
+            return $score;
+        });
+
+        // Build overall scores (reuses $members)
+        $overallScores = $this->buildOverallScores($members, $ownerId);
+
+        return [
+            'weekly' => $weeklyScores,
+            'overall' => $overallScores,
+            'milestones' => $milestones,
+        ];
+    }
+
+    /**
+     * Walk backwards from yesterday counting consecutive days where the member
+     * completed all their assigned chores for that day_of_week.
+     *
+     * Kept public for individual lookups and tests.
+     */
+    public function getCurrentStreak(int $familyMemberId, int $ownerId): int
+    {
+        $members = FamilyMember::where('id', $familyMemberId)->get();
+        $streaks = $this->batchCalculateStreaks($members, $ownerId);
+
+        return $streaks[$familyMemberId] ?? 0;
+    }
+
+    /**
+     * Compare current streak against milestone rows and return total bonus points earned.
+     */
+    public function getStreakBonusesEarned(int $streak, Collection $milestones): int
+    {
+        return $milestones
+            ->filter(fn ($m) => $streak >= $m->days_required)
+            ->sum('bonus_points');
+    }
+
+    /**
+     * Batch-calculate streaks for all given members using only 2 queries.
+     *
+     * @return array<int, int> member_id => streak days
+     */
+    private function batchCalculateStreaks(Collection $members, int $ownerId): array
+    {
+        $memberIds = $members->pluck('id');
+
+        // 1 query: all active assignments for this family
+        $assignments = ChoreAssignment::whereIn('family_member_id', $memberIds)
+            ->whereHas('chore', fn ($q) => $q->where('user_id', $ownerId)->where('is_active', true))
+            ->get(['id', 'family_member_id', 'day_of_week']);
+
+        // Group: member_id → day_of_week → [assignment_ids]
+        $assignmentMap = [];
+        foreach ($assignments as $a) {
+            $assignmentMap[$a->family_member_id][$a->day_of_week][] = $a->id;
+        }
+
+        // 1 query: all completions from last 365 days
+        $completions = ChoreCompletion::whereIn('family_member_id', $memberIds)
+            ->whereDate('completed_date', '>=', Carbon::yesterday()->subDays(365)->toDateString())
+            ->get(['chore_assignment_id', 'family_member_id', 'completed_date']);
+
+        // Group: member_id → date_string → [assignment_ids]
+        $completionMap = [];
+        foreach ($completions as $c) {
+            $dateStr = $c->completed_date->format('Y-m-d');
+            $completionMap[$c->family_member_id][$dateStr][] = $c->chore_assignment_id;
+        }
+
+        // Calculate each streak in pure PHP (zero additional queries)
+        $streaks = [];
+        foreach ($members as $member) {
+            $streaks[$member->id] = $this->calculateStreakFromMaps(
+                $assignmentMap[$member->id] ?? [],
+                $completionMap[$member->id] ?? [],
+            );
+        }
+
+        return $streaks;
+    }
+
+    /**
+     * Compute streak from pre-loaded data — no database queries.
+     */
+    private function calculateStreakFromMaps(array $assignmentsByDow, array $completionsByDate): int
+    {
+        $date = Carbon::yesterday();
+        $streak = 0;
+
+        for ($i = 0; $i < 365; $i++) {
+            $dow = $date->dayOfWeek;
+            $expectedIds = $assignmentsByDow[$dow] ?? [];
+
+            if (empty($expectedIds)) {
+                $date->subDay();
+
+                continue;
+            }
+
+            $dateStr = $date->format('Y-m-d');
+            $completedIds = $completionsByDate[$dateStr] ?? [];
+
+            // Check all expected assignments were completed
+            if (count(array_intersect($expectedIds, $completedIds)) >= count($expectedIds)) {
+                $streak++;
+                $date->subDay();
+            } else {
+                break;
+            }
+        }
+
+        return $streak;
+    }
+
+    /**
+     * Build overall scores from pre-loaded members.
+     */
+    private function buildOverallScores(Collection $members, int $ownerId): Collection
+    {
+        $memberIds = $members->pluck('id');
+
+        $chorePoints = ChoreCompletion::whereIn('family_member_id', $memberIds)
             ->selectRaw('family_member_id, SUM(points_earned) as total')
             ->groupBy('family_member_id')
             ->pluck('total', 'family_member_id');
@@ -87,83 +263,5 @@ class ChoreScoreService
                 'total' => $total,
             ];
         })->sortByDesc('total')->values();
-    }
-
-    /**
-     * Walk backwards from yesterday counting consecutive days where the member
-     * completed all their assigned chores for that day_of_week.
-     */
-    public function getCurrentStreak(int $familyMemberId, int $ownerId): int
-    {
-        $date = Carbon::yesterday();
-        $streak = 0;
-
-        for ($i = 0; $i < 365; $i++) {
-            $dayOfWeek = $date->dayOfWeek;
-
-            // Get all assignments for this member on this day_of_week
-            $assignments = ChoreAssignment::where('family_member_id', $familyMemberId)
-                ->where('day_of_week', $dayOfWeek)
-                ->whereHas('chore', fn ($q) => $q->where('user_id', $ownerId)->where('is_active', true))
-                ->pluck('id');
-
-            // No assignments on this day means skip (don't break streak)
-            if ($assignments->isEmpty()) {
-                $date->subDay();
-
-                continue;
-            }
-
-            // Check if all assignments were completed on this date
-            $completions = ChoreCompletion::where('family_member_id', $familyMemberId)
-                ->whereIn('chore_assignment_id', $assignments)
-                ->whereDate('completed_date', $date->toDateString())
-                ->count();
-
-            if ($completions >= $assignments->count()) {
-                $streak++;
-                $date->subDay();
-            } else {
-                break;
-            }
-        }
-
-        return $streak;
-    }
-
-    /**
-     * Compare current streak against milestone rows and return total bonus points earned.
-     */
-    public function getStreakBonusesEarned(int $streak, Collection $milestones): int
-    {
-        return $milestones
-            ->filter(fn ($m) => $streak >= $m->days_required)
-            ->sum('bonus_points');
-    }
-
-    /**
-     * Full scoreboard data.
-     */
-    public function getScoreboard(int $ownerId, ?Carbon $weekStart = null): array
-    {
-        $weeklyScores = $this->getWeeklyScores($ownerId, $weekStart);
-        $overallScores = $this->getOverallScores($ownerId);
-
-        $milestones = StreakBonus::where('user_id', $ownerId)
-            ->orderBy('days_required')
-            ->get();
-
-        // Add rank to weekly scores
-        $weeklyScores = $weeklyScores->values()->map(function ($score, $index) {
-            $score['rank'] = $index + 1;
-
-            return $score;
-        });
-
-        return [
-            'weekly' => $weeklyScores,
-            'overall' => $overallScores,
-            'milestones' => $milestones,
-        ];
     }
 }
