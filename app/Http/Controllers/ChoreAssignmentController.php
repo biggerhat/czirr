@@ -19,14 +19,15 @@ class ChoreAssignmentController extends Controller
         ]);
 
         $user = $request->user();
+        $ownerId = $user->familyOwnerId();
 
         $chore = Chore::findOrFail($validated['chore_id']);
-        if ($chore->user_id !== $user->id) {
+        if ($chore->user_id !== $ownerId) {
             abort(403);
         }
 
         $familyMember = FamilyMember::findOrFail($validated['family_member_id']);
-        if ($familyMember->user_id !== $user->id) {
+        if ($familyMember->user_id !== $ownerId) {
             abort(403);
         }
 

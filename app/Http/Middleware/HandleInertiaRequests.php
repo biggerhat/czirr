@@ -46,7 +46,7 @@ class HandleInertiaRequests extends Middleware
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
             'familyRole' => fn () => $user
                 ? ($user->linkedFamilyMember()?->role?->value
-                    ?? $user->familyMembers()->where('linked_user_id', $user->id)->first()?->role?->value)
+                    ?? \App\Models\FamilyMember::where('user_id', $user->id)->where('linked_user_id', $user->id)->first()?->role?->value)
                 : null,
             'permissions' => fn () => $user
                 ? $user->getAllPermissions()->pluck('name')->toArray()

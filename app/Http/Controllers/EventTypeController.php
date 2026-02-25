@@ -14,9 +14,9 @@ class EventTypeController extends Controller
             'name' => ['required', 'string', 'max:50'],
         ]);
 
-        $user = $request->user();
+        $ownerId = $request->user()->familyOwnerId();
 
-        $exists = EventType::where('user_id', $user->id)
+        $exists = EventType::where('user_id', $ownerId)
             ->where('name', $validated['name'])
             ->exists();
 
@@ -25,7 +25,7 @@ class EventTypeController extends Controller
         }
 
         $eventType = EventType::create([
-            'user_id' => $user->id,
+            'user_id' => $ownerId,
             'name' => $validated['name'],
         ]);
 

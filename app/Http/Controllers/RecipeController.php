@@ -45,7 +45,7 @@ class RecipeController extends Controller
         $user = $request->user();
         $canEdit = $user->can('recipes.edit');
         $availableCookbooks = $canEdit
-            ? $user->cookbooks()->orderBy('name')->get()
+            ? $user->familyOwner()->cookbooks()->orderBy('name')->get()
             : collect();
 
         return Inertia::render('recipes/Show', [
@@ -68,7 +68,7 @@ class RecipeController extends Controller
 
     public function edit(Request $request, Recipe $recipe): Response
     {
-        if ($recipe->user_id !== $request->user()->id) {
+        if ($recipe->user_id !== $request->user()->familyOwnerId()) {
             abort(403);
         }
 
@@ -107,8 +107,10 @@ class RecipeController extends Controller
         $tagIds = $validated['tag_ids'] ?? [];
         unset($validated['tag_ids']);
 
+        $owner = $request->user()->familyOwner();
+
         /** @var Recipe $recipe */
-        $recipe = $request->user()->recipes()->create($validated);
+        $recipe = $owner->recipes()->create($validated);
         $recipe->tags()->sync($tagIds);
 
         return response()->json($recipe->load(['cuisine', 'tags']), 201);
@@ -116,7 +118,7 @@ class RecipeController extends Controller
 
     public function update(Request $request, Recipe $recipe): JsonResponse
     {
-        if ($recipe->user_id !== $request->user()->id) {
+        if ($recipe->user_id !== $request->user()->familyOwnerId()) {
             abort(403);
         }
 
@@ -152,7 +154,7 @@ class RecipeController extends Controller
 
     public function destroy(Request $request, Recipe $recipe): JsonResponse
     {
-        if ($recipe->user_id !== $request->user()->id) {
+        if ($recipe->user_id !== $request->user()->familyOwnerId()) {
             abort(403);
         }
 

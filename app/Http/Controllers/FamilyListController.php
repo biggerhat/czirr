@@ -57,8 +57,10 @@ class FamilyListController extends Controller
             'member_ids.*' => ['integer', 'exists:family_members,id'],
         ]);
 
+        $owner = $request->user()->familyOwner();
+
         /** @var FamilyList $list */
-        $list = $request->user()->familyLists()->create([
+        $list = $owner->familyLists()->create([
             'name' => $validated['name'],
             'type' => $validated['type'],
             'visibility' => $validated['visibility'],
@@ -73,7 +75,7 @@ class FamilyListController extends Controller
 
     public function update(Request $request, FamilyList $familyList): JsonResponse
     {
-        if ($familyList->user_id !== $request->user()->id) {
+        if ($familyList->user_id !== $request->user()->familyOwnerId()) {
             abort(403);
         }
 
@@ -102,7 +104,7 @@ class FamilyListController extends Controller
 
     public function togglePin(Request $request, FamilyList $familyList): JsonResponse
     {
-        if ($familyList->user_id !== $request->user()->id) {
+        if ($familyList->user_id !== $request->user()->familyOwnerId()) {
             abort(403);
         }
 
@@ -113,7 +115,7 @@ class FamilyListController extends Controller
 
     public function destroy(Request $request, FamilyList $familyList): JsonResponse
     {
-        if ($familyList->user_id !== $request->user()->id) {
+        if ($familyList->user_id !== $request->user()->familyOwnerId()) {
             abort(403);
         }
 

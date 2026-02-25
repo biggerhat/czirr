@@ -39,7 +39,8 @@
       "Bash(dpkg -l:*)",
       "Bash(npm uninstall:*)",
       "WebFetch(domain:inertiajs.com)",
-      "WebFetch(domain:v2.inertiajs.com)"
+      "WebFetch(domain:v2.inertiajs.com)",
+      "Bash(sail bin phpstan:*)"
     ]
   }
 }

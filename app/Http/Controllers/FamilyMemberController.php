@@ -84,6 +84,7 @@ class FamilyMemberController extends Controller
     public function store(Request $request): JsonResponse
     {
         $user = $request->user();
+        $ownerId = $user->familyOwnerId();
 
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
@@ -94,12 +95,12 @@ class FamilyMemberController extends Controller
                 'nullable',
                 'integer',
                 'exists:users,id',
-                Rule::unique('family_members')->where('user_id', $user->id),
+                Rule::unique('family_members')->where('user_id', $ownerId),
             ],
         ]);
 
         /** @var FamilyMember $member */
-        $member = $user->familyMembers()->create($validated);
+        $member = FamilyMember::create([...$validated, 'user_id' => $ownerId]);
 
         // Assign matching spatie role to linked user
         if ($member->linked_user_id) {
@@ -120,9 +121,8 @@ class FamilyMemberController extends Controller
 
     public function update(Request $request, FamilyMember $familyMember): JsonResponse
     {
-        abort_unless($familyMember->user_id === $request->user()->id, 403);
-
-        $user = $request->user();
+        $ownerId = $request->user()->familyOwnerId();
+        abort_unless($familyMember->user_id === $ownerId, 403);
 
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
@@ -134,7 +134,7 @@ class FamilyMemberController extends Controller
                 'integer',
                 'exists:users,id',
                 Rule::unique('family_members')
-                    ->where('user_id', $user->id)
+                    ->where('user_id', $ownerId)
                     ->ignore($familyMember->id),
             ],
         ]);
@@ -161,7 +161,7 @@ class FamilyMemberController extends Controller
 
     public function destroy(Request $request, FamilyMember $familyMember): JsonResponse
     {
-        abort_unless($familyMember->user_id === $request->user()->id, 403);
+        abort_unless($familyMember->user_id === $request->user()->familyOwnerId(), 403);
 
         // Prevent deleting your own linked family member
         if ($familyMember->linked_user_id === $request->user()->id) {
@@ -175,7 +175,7 @@ class FamilyMemberController extends Controller
 
     public function updateRole(Request $request, FamilyMember $familyMember): JsonResponse
     {
-        abort_unless($familyMember->user_id === $request->user()->id, 403);
+        abort_unless($familyMember->user_id === $request->user()->familyOwnerId(), 403);
 
         if (! $familyMember->linked_user_id) {
             return response()->json(['message' => 'This member is not linked to a user account.'], 422);

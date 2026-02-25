@@ -70,7 +70,8 @@ class MealPlanController extends Controller
             'description' => ['nullable', 'string'],
         ]);
 
-        $entry = $request->user()->mealPlanEntries()->create($validated);
+        $owner = $request->user()->familyOwner();
+        $entry = $owner->mealPlanEntries()->create($validated);
         $entry->load('recipe:id,name');
 
         return response()->json($entry, 201);
@@ -78,7 +79,7 @@ class MealPlanController extends Controller
 
     public function update(Request $request, MealPlanEntry $mealPlanEntry): JsonResponse
     {
-        if ($mealPlanEntry->user_id !== $request->user()->id) {
+        if ($mealPlanEntry->user_id !== $request->user()->familyOwnerId()) {
             abort(403);
         }
 
@@ -98,7 +99,7 @@ class MealPlanController extends Controller
 
     public function destroy(Request $request, MealPlanEntry $mealPlanEntry): JsonResponse
     {
-        if ($mealPlanEntry->user_id !== $request->user()->id) {
+        if ($mealPlanEntry->user_id !== $request->user()->familyOwnerId()) {
             abort(403);
         }
 
@@ -146,8 +147,10 @@ class MealPlanController extends Controller
 
         $listName = $this->groceryListName($startDate, $endDate);
 
+        $ownerId = $request->user()->familyOwnerId();
+
         // Check for an existing grocery list with the same name
-        $existing = FamilyList::where('user_id', $request->user()->id)
+        $existing = FamilyList::where('user_id', $ownerId)
             ->where('name', $listName)
             ->where('type', ListType::Grocery)
             ->first();
@@ -172,7 +175,7 @@ class MealPlanController extends Controller
             'type' => ListType::Grocery,
             'visibility' => ListVisibility::Everyone,
         ]);
-        $list->user_id = $request->user()->id;
+        $list->user_id = $ownerId;
         $list->save();
 
         $list->items()->createMany($merged);
