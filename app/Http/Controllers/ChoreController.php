@@ -3,7 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Models\Chore;
+use App\Models\ChoreCompletion;
 use App\Models\FamilyMember;
+use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -25,9 +27,15 @@ class ChoreController extends Controller
             ->orderBy('name')
             ->get();
 
+        $today = Carbon::today()->toDateString();
+        $todaysCompletions = ChoreCompletion::whereHas('assignment.chore', fn ($q) => $q->where('user_id', $ownerId))
+            ->where('completed_date', $today)
+            ->get();
+
         return Inertia::render('chores/Index', [
             'chores' => $chores,
             'familyMembers' => $familyMembers,
+            'todaysCompletions' => $todaysCompletions,
             'can' => [
                 'create' => $user->can('chores.create'),
                 'edit' => $user->can('chores.edit'),
@@ -43,6 +51,7 @@ class ChoreController extends Controller
             'name' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
             'is_active' => ['boolean'],
+            'points' => ['sometimes', 'integer', 'min:1', 'max:1000'],
         ]);
 
         $owner = $request->user()->familyOwner();
@@ -61,6 +70,7 @@ class ChoreController extends Controller
             'name' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
             'is_active' => ['boolean'],
+            'points' => ['sometimes', 'integer', 'min:1', 'max:1000'],
         ]);
 
         $chore->update($validated);

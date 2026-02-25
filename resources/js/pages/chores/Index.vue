@@ -1,10 +1,13 @@
 <script setup lang="ts">
 import { router } from '@inertiajs/vue3';
-import { CalendarDays, Check, ChevronLeft, ChevronRight, Grid3X3, Pencil, Plus, Printer, Trash2 } from 'lucide-vue-next';
+import { CalendarDays, Check, CheckCircle2, ChevronLeft, ChevronRight, Grid3X3, Pencil, Plus, Printer, Star, Trash2 } from 'lucide-vue-next';
 import { ref, computed } from 'vue';
 import CellPicker from '@/components/chores/CellPicker.vue';
 import ChoreModal from '@/components/chores/ChoreModal.vue';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
     Dialog,
     DialogContent,
@@ -18,7 +21,7 @@ import AppLayout from '@/layouts/AppLayout.vue';
 import { EVENT_COLORS } from '@/lib/calendar';
 import type { BreadcrumbItem } from '@/types';
 import type { FamilyMember } from '@/types/calendar';
-import type { Chore, DayOfWeek } from '@/types/chores';
+import type { Chore, ChoreCompletion, DayOfWeek } from '@/types/chores';
 import { DAY_LABELS } from '@/types/chores';
 
 type ChoreView = 'grid' | 'day';
@@ -36,6 +39,7 @@ const DAY_LABELS_FULL: Record<DayOfWeek, string> = {
 const props = defineProps<{
     chores: Chore[];
     familyMembers: FamilyMember[];
+    todaysCompletions: ChoreCompletion[];
     can: {
         create: boolean;
         edit: boolean;
@@ -43,6 +47,78 @@ const props = defineProps<{
         assign: boolean;
     };
 }>();
+
+// Today's completion tracking
+const todayStr = new Date().toISOString().slice(0, 10);
+const todayDow = new Date().getDay() as DayOfWeek;
+const completionIds = ref(new Set(props.todaysCompletions.map(c => c.chore_assignment_id)));
+const isTogglingCompletion = ref(false);
+
+type MemberProgress = {
+    member: FamilyMember;
+    assignments: { assignment: { id: number; chore: Chore }; completed: boolean }[];
+    earned: number;
+    possible: number;
+};
+
+const todaysProgress = computed<MemberProgress[]>(() => {
+    return props.familyMembers.map(member => {
+        const memberAssignments = props.chores
+            .filter(c => c.is_active)
+            .flatMap(chore =>
+                chore.assignments
+                    .filter(a => a.day_of_week === todayDow && a.family_member_id === member.id)
+                    .map(a => ({
+                        assignment: { id: a.id, chore },
+                        completed: completionIds.value.has(a.id),
+                    })),
+            );
+
+        const earned = memberAssignments
+            .filter(a => a.completed)
+            .reduce((sum, a) => sum + a.assignment.chore.points, 0);
+        const possible = memberAssignments.reduce((sum, a) => sum + a.assignment.chore.points, 0);
+
+        return { member, assignments: memberAssignments, earned, possible };
+    }).filter(mp => mp.assignments.length > 0);
+});
+
+function xsrfHeaders(): HeadersInit {
+    return {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'X-Requested-With': 'XMLHttpRequest',
+        'X-XSRF-TOKEN': decodeURIComponent(
+            document.cookie.match(/XSRF-TOKEN=([^;]+)/)?.[1] ?? '',
+        ),
+    };
+}
+
+async function toggleCompletion(assignmentId: number) {
+    isTogglingCompletion.value = true;
+    try {
+        const response = await fetch('/chore-completions/toggle', {
+            method: 'POST',
+            headers: xsrfHeaders(),
+            body: JSON.stringify({
+                chore_assignment_id: assignmentId,
+                date: todayStr,
+            }),
+        });
+        if (response.ok) {
+            const data = await response.json();
+            if (data.completed) {
+                completionIds.value.add(assignmentId);
+            } else {
+                completionIds.value.delete(assignmentId);
+            }
+            // Force reactivity
+            completionIds.value = new Set(completionIds.value);
+        }
+    } finally {
+        isTogglingCompletion.value = false;
+    }
+}
 
 const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Chores' },
@@ -259,6 +335,59 @@ const { onTouchStart: swipeTouchStart, onTouchEnd: swipeTouchEnd } = useSwipe(ne
                 </div>
             </div>
 
+            <!-- Today's Progress -->
+            <Card v-if="todaysProgress.length > 0">
+                <CardHeader class="pb-3">
+                    <CardTitle class="text-base flex items-center gap-2">
+                        <CheckCircle2 class="h-4 w-4" />
+                        Today's Progress
+                    </CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <div class="space-y-5">
+                        <div v-for="mp in todaysProgress" :key="mp.member.id">
+                            <div class="flex items-center gap-2 mb-1.5">
+                                <span
+                                    class="h-2.5 w-2.5 shrink-0 rounded-full"
+                                    :class="EVENT_COLORS[mp.member.color]?.dot ?? 'bg-gray-400'"
+                                />
+                                <span class="text-sm font-medium">{{ mp.member.nickname || mp.member.name }}</span>
+                                <span class="text-xs font-medium ml-auto tabular-nums">
+                                    <Star class="h-3 w-3 inline -mt-0.5" /> {{ mp.earned }}/{{ mp.possible }} pts
+                                </span>
+                            </div>
+                            <!-- Progress bar -->
+                            <div class="h-2 w-full rounded-full bg-muted overflow-hidden mb-2">
+                                <div
+                                    class="h-full rounded-full transition-all duration-500"
+                                    :class="mp.earned === mp.possible && mp.possible > 0 ? 'bg-emerald-500' : EVENT_COLORS[mp.member.color]?.dot?.replace('bg-', 'bg-') ?? 'bg-blue-500'"
+                                    :style="{ width: mp.possible > 0 ? (mp.earned / mp.possible * 100) + '%' : '0%' }"
+                                />
+                            </div>
+                            <div class="space-y-1 pl-5">
+                                <button
+                                    v-for="item in mp.assignments"
+                                    :key="item.assignment.id"
+                                    class="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors hover:bg-accent"
+                                    :disabled="isTogglingCompletion"
+                                    @click="toggleCompletion(item.assignment.id)"
+                                >
+                                    <Checkbox
+                                        :model-value="item.completed"
+                                        @click.stop
+                                        @update:model-value="toggleCompletion(item.assignment.id)"
+                                    />
+                                    <span class="flex-1 text-left" :class="item.completed ? 'line-through text-muted-foreground' : 'font-medium'">
+                                        {{ item.assignment.chore.name }}
+                                    </span>
+                                    <Badge :variant="item.completed ? 'outline' : 'secondary'" class="text-xs">{{ item.assignment.chore.points }} pts</Badge>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </CardContent>
+            </Card>
+
             <!-- Empty state -->
             <div v-if="chores.length === 0" class="rounded-lg border border-dashed p-8 text-center text-muted-foreground">
                 No chores yet. Click "Add Chore" to get started.
@@ -302,7 +431,10 @@ const { onTouchStart: swipeTouchStart, onTouchEnd: swipeTouchEnd } = useSwipe(ne
                             class="w-full text-left rounded-lg border px-4 py-3 transition-colors hover:bg-accent cursor-pointer"
                             @click="openDetail(entry, selectedDayIndex)"
                         >
-                            <div class="font-medium">{{ entry.chore.name }}</div>
+                            <div class="font-medium flex items-center gap-1.5">
+                                {{ entry.chore.name }}
+                                <Badge variant="secondary" class="text-xs">{{ entry.chore.points }} pts</Badge>
+                            </div>
                             <div v-if="entry.chore.description" class="text-xs text-muted-foreground mt-0.5">{{ entry.chore.description }}</div>
                             <div class="mt-2 flex flex-wrap gap-2">
                                 <span
@@ -362,7 +494,10 @@ const { onTouchStart: swipeTouchStart, onTouchEnd: swipeTouchEnd } = useSwipe(ne
                                 <td class="px-4 py-2">
                                     <div class="flex items-center gap-1">
                                         <div class="flex-1 min-w-0">
-                                            <div class="font-medium truncate">{{ chore.name }}</div>
+                                            <div class="font-medium truncate flex items-center gap-1.5">
+                                                {{ chore.name }}
+                                                <Badge variant="secondary" class="text-xs shrink-0">{{ chore.points }} pts</Badge>
+                                            </div>
                                             <div v-if="chore.description" class="text-xs text-muted-foreground truncate">
                                                 {{ chore.description }}
                                             </div>
@@ -441,7 +576,10 @@ const { onTouchStart: swipeTouchStart, onTouchEnd: swipeTouchEnd } = useSwipe(ne
                                 class="w-full text-left rounded-md border px-2.5 py-2 text-sm transition-colors hover:bg-accent cursor-pointer"
                                 @click="openDetail(entry, day)"
                             >
-                                <div class="font-medium text-sm">{{ entry.chore.name }}</div>
+                                <div class="font-medium text-sm flex items-center gap-1.5">
+                                    {{ entry.chore.name }}
+                                    <Badge v-if="entry.chore.points" variant="secondary" class="text-xs">{{ entry.chore.points }} pts</Badge>
+                                </div>
                                 <div class="mt-1 space-y-0.5">
                                     <div
                                         v-for="member in entry.members"
@@ -580,7 +718,7 @@ const { onTouchStart: swipeTouchStart, onTouchEnd: swipeTouchEnd } = useSwipe(ne
                                 :key="entry.chore.id"
                                 class="mb-1.5 last:mb-0"
                             >
-                                <div class="font-semibold">{{ entry.chore.name }}</div>
+                                <div class="font-semibold">{{ entry.chore.name }}<span v-if="entry.chore.points"> ({{ entry.chore.points }} pts)</span></div>
                                 <div
                                     v-for="member in entry.members"
                                     :key="member.id"
@@ -622,7 +760,7 @@ const { onTouchStart: swipeTouchStart, onTouchEnd: swipeTouchEnd } = useSwipe(ne
 @media print {
     .print-only {
         display: block !important;
-        padding: 1cm;
+        padding: 0.5cm;
         margin: 0;
         color: black;
     }

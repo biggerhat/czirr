@@ -5,37 +5,33 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 
-class ChoreAssignment extends Model
+class ChoreCompletion extends Model
 {
     use HasFactory;
 
     protected $fillable = [
-        'chore_id',
+        'chore_assignment_id',
         'family_member_id',
-        'day_of_week',
+        'completed_date',
+        'points_earned',
     ];
 
     protected function casts(): array
     {
         return [
-            'day_of_week' => 'integer',
+            'completed_date' => 'date',
+            'points_earned' => 'integer',
         ];
     }
 
-    public function chore(): BelongsTo
+    public function assignment(): BelongsTo
     {
-        return $this->belongsTo(Chore::class);
+        return $this->belongsTo(ChoreAssignment::class, 'chore_assignment_id');
     }
 
     public function familyMember(): BelongsTo
     {
         return $this->belongsTo(FamilyMember::class);
-    }
-
-    public function completions(): HasMany
-    {
-        return $this->hasMany(ChoreCompletion::class);
     }
 }

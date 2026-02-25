@@ -7,6 +7,7 @@ use App\Models\Bill;
 use App\Models\ChoreAssignment;
 use App\Models\FamilyList;
 use App\Models\MealPlanEntry;
+use App\Services\ChoreScoreService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -48,11 +49,16 @@ class DashboardController extends Controller
         }
 
         $todaysChores = collect();
+        $scoreboardSummary = [];
         if ($can['viewChores']) {
             $todaysChores = ChoreAssignment::where('day_of_week', Carbon::now()->dayOfWeek)
                 ->whereHas('chore', fn ($q) => $q->where('user_id', $ownerId)->where('is_active', true))
                 ->with(['chore', 'familyMember'])
                 ->get();
+
+            $scoreService = app(ChoreScoreService::class);
+            $weeklyScores = $scoreService->getWeeklyScores($ownerId);
+            $scoreboardSummary = $weeklyScores->take(3)->values()->all();
         }
 
         $todaysMeals = collect();
@@ -94,6 +100,7 @@ class DashboardController extends Controller
             'todaysChores' => $todaysChores,
             'todaysMeals' => $todaysMeals,
             'pinnedLists' => $pinnedLists,
+            'scoreboardSummary' => $scoreboardSummary,
             'can' => $can,
         ]);
     }

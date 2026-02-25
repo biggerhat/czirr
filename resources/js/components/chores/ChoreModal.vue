@@ -31,6 +31,7 @@ const errors = ref<Record<string, string[]>>({});
 const name = ref('');
 const description = ref('');
 const isActive = ref(true);
+const points = ref(10);
 
 watch(() => props.open, (open) => {
     if (!open) return;
@@ -40,10 +41,12 @@ watch(() => props.open, (open) => {
         name.value = props.chore.name;
         description.value = props.chore.description ?? '';
         isActive.value = props.chore.is_active;
+        points.value = props.chore.points;
     } else {
         name.value = '';
         description.value = '';
         isActive.value = true;
+        points.value = 10;
     }
 });
 
@@ -55,6 +58,7 @@ async function save() {
         name: name.value,
         description: description.value || null,
         is_active: isActive.value,
+        points: points.value,
     };
 
     try {
@@ -108,6 +112,12 @@ async function save() {
                         <Label for="chore-description">Description</Label>
                         <Textarea id="chore-description" v-model="description" placeholder="Optional details" />
                         <p v-if="errors.description" class="text-sm text-destructive">{{ errors.description[0] }}</p>
+                    </div>
+
+                    <div class="space-y-2">
+                        <Label for="chore-points">Points</Label>
+                        <Input id="chore-points" v-model.number="points" type="number" min="1" max="1000" />
+                        <p v-if="errors.points" class="text-sm text-destructive">{{ errors.points[0] }}</p>
                     </div>
 
                     <div class="flex items-center gap-2">
