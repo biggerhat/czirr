@@ -71,8 +71,10 @@ class CookbookController extends Controller
             'member_ids.*' => ['integer', 'exists:family_members,id'],
         ]);
 
+        $owner = $request->user()->familyOwner();
+
         /** @var Cookbook $cookbook */
-        $cookbook = $request->user()->cookbooks()->create([
+        $cookbook = $owner->cookbooks()->create([
             'name' => $validated['name'],
             'description' => $validated['description'] ?? null,
             'visibility' => $validated['visibility'],
@@ -87,7 +89,7 @@ class CookbookController extends Controller
 
     public function update(Request $request, Cookbook $cookbook): JsonResponse
     {
-        if ($cookbook->user_id !== $request->user()->id) {
+        if ($cookbook->user_id !== $request->user()->familyOwnerId()) {
             abort(403);
         }
 
@@ -116,7 +118,7 @@ class CookbookController extends Controller
 
     public function destroy(Request $request, Cookbook $cookbook): JsonResponse
     {
-        if ($cookbook->user_id !== $request->user()->id) {
+        if ($cookbook->user_id !== $request->user()->familyOwnerId()) {
             abort(403);
         }
 

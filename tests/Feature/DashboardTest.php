@@ -20,7 +20,7 @@ test('authenticated users can visit the dashboard', function () {
         ->assertInertia(fn ($page) => $page->component('Dashboard'));
 });
 
-test('dashboard shows upcoming bills', function () {
+test('dashboard shows today\'s bills', function () {
     $user = createAdminUser();
     $category = BudgetCategory::factory()->create(['user_id' => $user->id]);
     Bill::factory()->create([
@@ -36,7 +36,7 @@ test('dashboard shows upcoming bills', function () {
         ->assertOk()
         ->assertInertia(fn ($page) => $page
             ->component('Dashboard')
-            ->has('upcomingBills')
+            ->has('todaysBills')
         );
 });
 

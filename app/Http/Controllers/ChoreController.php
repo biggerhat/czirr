@@ -45,14 +45,15 @@ class ChoreController extends Controller
             'is_active' => ['boolean'],
         ]);
 
-        $chore = $request->user()->chores()->create($validated);
+        $owner = $request->user()->familyOwner();
+        $chore = $owner->chores()->create($validated);
 
         return response()->json($chore, 201);
     }
 
     public function update(Request $request, Chore $chore): JsonResponse
     {
-        if ($chore->user_id !== $request->user()->id) {
+        if ($chore->user_id !== $request->user()->familyOwnerId()) {
             abort(403);
         }
 
@@ -69,7 +70,7 @@ class ChoreController extends Controller
 
     public function destroy(Request $request, Chore $chore): JsonResponse
     {
-        if ($chore->user_id !== $request->user()->id) {
+        if ($chore->user_id !== $request->user()->familyOwnerId()) {
             abort(403);
         }
 

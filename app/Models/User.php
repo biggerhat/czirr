@@ -91,6 +91,19 @@ class User extends Authenticatable
         return $this->linkedFamilyMember()?->user_id ?? $this->id;
     }
 
+    /**
+     * Return the family owner User instance.
+     * For family owners this returns $this; for linked members it returns
+     * the User who owns the family. Use this when you need to create
+     * resources via Eloquent relationships (e.g. $owner->chores()->create()).
+     */
+    public function familyOwner(): self
+    {
+        $ownerId = $this->familyOwnerId();
+
+        return $ownerId === $this->id ? $this : self::findOrFail($ownerId);
+    }
+
     public function budgetCategories(): HasMany
     {
         return $this->hasMany(BudgetCategory::class);

@@ -14,9 +14,9 @@ class RecipeTagController extends Controller
             'name' => ['required', 'string', 'max:100'],
         ]);
 
-        $user = $request->user();
+        $owner = $request->user()->familyOwner();
 
-        $exists = RecipeTag::where('user_id', $user->id)
+        $exists = RecipeTag::where('user_id', $owner->id)
             ->where('name', $validated['name'])
             ->exists();
 
@@ -24,14 +24,14 @@ class RecipeTagController extends Controller
             return response()->json(['errors' => ['name' => ['You already have a tag with this name.']]], 422);
         }
 
-        $tag = $user->recipeTags()->create($validated);
+        $tag = $owner->recipeTags()->create($validated);
 
         return response()->json($tag, 201);
     }
 
     public function destroy(Request $request, RecipeTag $recipeTag): JsonResponse
     {
-        if ($recipeTag->user_id === null || $recipeTag->user_id !== $request->user()->id) {
+        if ($recipeTag->user_id === null || $recipeTag->user_id !== $request->user()->familyOwnerId()) {
             abort(403);
         }
 

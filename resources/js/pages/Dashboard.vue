@@ -7,7 +7,7 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Spinner } from '@/components/ui/spinner';
 import AppLayout from '@/layouts/AppLayout.vue';
-import { EVENT_COLORS, getEventColor, formatEventTime, formatEventDate } from '@/lib/calendar';
+import { EVENT_COLORS, getEventColor, formatEventTime } from '@/lib/calendar';
 import { type BreadcrumbItem } from '@/types';
 import type { UpcomingBill } from '@/types/budgeting';
 import type { CalendarEvent } from '@/types/calendar';
@@ -23,11 +23,18 @@ type DashboardMeal = {
     recipe_id: number | null;
 };
 
-defineProps<{
-    upcomingBills: UpcomingBill[];
+const props = defineProps<{
+    todaysBills: UpcomingBill[];
     todaysChores: ChoreAssignment[];
     todaysMeals: DashboardMeal[];
     pinnedLists: FamilyList[];
+    can: {
+        viewBills: boolean;
+        viewEvents: boolean;
+        viewMeals: boolean;
+        viewChores: boolean;
+        viewLists: boolean;
+    };
 }>();
 
 const mealTypeColors: Record<MealType, string> = {
@@ -49,36 +56,8 @@ const events = ref<CalendarEvent[]>([]);
 const eventsLoading = ref(false);
 const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
-function getDueBadge(bill: UpcomingBill): { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' } {
-    if (bill.is_paid_this_month) {
-        return { label: 'Paid', variant: 'secondary' };
-    }
-
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const due = new Date(bill.next_due_date + 'T00:00:00');
-    const diffMs = due.getTime() - today.getTime();
-    const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
-
-    if (diffDays === 0) {
-        return { label: 'Due today', variant: 'destructive' };
-    }
-    if (diffDays === 1) {
-        return { label: 'Due tomorrow', variant: 'destructive' };
-    }
-    if (diffDays <= 3) {
-        return { label: `In ${diffDays} days`, variant: 'destructive' };
-    }
-    return { label: `In ${diffDays} days`, variant: 'outline' };
-}
-
 function formatAmount(amount: number): string {
     return new Intl.NumberFormat(undefined, { style: 'currency', currency: 'USD' }).format(amount);
-}
-
-function formatBillDueDate(dateStr: string): string {
-    const date = new Date(dateStr + 'T00:00:00');
-    return date.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
 }
 
 async function loadEvents() {
@@ -87,7 +66,6 @@ async function loadEvents() {
         const start = new Date();
         start.setHours(0, 0, 0, 0);
         const end = new Date(start);
-        end.setDate(end.getDate() + 7);
         end.setHours(23, 59, 59, 999);
 
         const params = new URLSearchParams({
@@ -110,7 +88,11 @@ async function loadEvents() {
     }
 }
 
-onMounted(loadEvents);
+onMounted(() => {
+    if (props.can.viewEvents) {
+        loadEvents();
+    }
+});
 
 const MAX_PINNED_ITEMS = 8;
 
@@ -145,18 +127,18 @@ function pinnedListProgress(list: FamilyList): string {
     <AppLayout :breadcrumbs="breadcrumbs">
         <div class="flex h-full flex-1 flex-col gap-4 p-4">
             <div class="grid gap-4 md:grid-cols-2">
-                <!-- Upcoming Bills -->
-                <Card>
+                <!-- Today's Bills -->
+                <Card v-if="can.viewBills">
                     <CardHeader>
-                        <CardTitle>Upcoming Bills</CardTitle>
+                        <CardTitle>Today's Bills</CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <div v-if="upcomingBills.length === 0" class="text-sm text-muted-foreground py-4 text-center">
-                            No bills due in the next 14 days.
+                        <div v-if="todaysBills.length === 0" class="text-sm text-muted-foreground py-4 text-center">
+                            No bills due today.
                         </div>
                         <ul v-else class="space-y-3">
                             <li
-                                v-for="bill in upcomingBills"
+                                v-for="bill in todaysBills"
                                 :key="bill.id"
                                 class="flex items-center gap-3"
                             >
@@ -166,32 +148,28 @@ function pinnedListProgress(list: FamilyList): string {
                                 />
                                 <div class="flex-1 min-w-0">
                                     <div class="text-sm font-medium truncate">{{ bill.name }}</div>
-                                    <div class="text-xs text-muted-foreground">
-                                        {{ formatBillDueDate(bill.next_due_date) }}
-                                    </div>
+                                    <div class="text-xs text-muted-foreground">{{ bill.category?.name }}</div>
                                 </div>
                                 <div class="text-sm font-medium tabular-nums">
                                     {{ formatAmount(bill.amount) }}
                                 </div>
-                                <Badge :variant="getDueBadge(bill).variant">
-                                    {{ getDueBadge(bill).label }}
-                                </Badge>
+                                <Badge v-if="bill.is_paid_this_month" variant="secondary">Paid</Badge>
                             </li>
                         </ul>
                     </CardContent>
                 </Card>
 
-                <!-- Upcoming Events -->
-                <Card>
+                <!-- Today's Events -->
+                <Card v-if="can.viewEvents">
                     <CardHeader>
-                        <CardTitle>Upcoming Events</CardTitle>
+                        <CardTitle>Today's Events</CardTitle>
                     </CardHeader>
                     <CardContent>
                         <div v-if="eventsLoading" class="flex items-center justify-center py-4">
                             <Spinner class="size-5" />
                         </div>
                         <div v-else-if="events.length === 0" class="text-sm text-muted-foreground py-4 text-center">
-                            No events in the next 7 days.
+                            No events today.
                         </div>
                         <ul v-else class="space-y-3">
                             <li
@@ -206,13 +184,7 @@ function pinnedListProgress(list: FamilyList): string {
                                 <div class="flex-1 min-w-0">
                                     <div class="text-sm font-medium truncate">{{ event.title }}</div>
                                     <div class="text-xs text-muted-foreground">
-                                        {{ formatEventDate(event.starts_at, timezone) }}
-                                        <template v-if="!event.is_all_day">
-                                            &middot; {{ formatEventTime(event.starts_at, timezone) }}
-                                        </template>
-                                        <template v-else>
-                                            &middot; All day
-                                        </template>
+                                        {{ event.is_all_day ? 'All day' : formatEventTime(event.starts_at, timezone) }}
                                     </div>
                                 </div>
                             </li>
@@ -221,7 +193,7 @@ function pinnedListProgress(list: FamilyList): string {
                 </Card>
 
                 <!-- Today's Meals -->
-                <Card>
+                <Card v-if="can.viewMeals">
                     <CardHeader>
                         <CardTitle>Today's Meals</CardTitle>
                     </CardHeader>
@@ -252,7 +224,7 @@ function pinnedListProgress(list: FamilyList): string {
                 </Card>
 
                 <!-- Today's Chores -->
-                <Card>
+                <Card v-if="can.viewChores">
                     <CardHeader>
                         <CardTitle>Today's Chores</CardTitle>
                     </CardHeader>
@@ -282,6 +254,7 @@ function pinnedListProgress(list: FamilyList): string {
                 </Card>
 
                 <!-- Pinned Lists -->
+                <template v-if="can.viewLists">
                 <Card v-for="list in pinnedLists" :key="`list-${list.id}`">
                     <CardHeader class="flex-row items-center justify-between space-y-0">
                         <CardTitle>
@@ -320,6 +293,7 @@ function pinnedListProgress(list: FamilyList): string {
                         </ul>
                     </CardContent>
                 </Card>
+                </template>
             </div>
         </div>
     </AppLayout>

@@ -92,8 +92,10 @@ class EventController extends Controller
     {
         $validated = $request->validated();
 
+        $owner = $request->user()->familyOwner();
+
         /** @var Event $event */
-        $event = $request->user()->events()->create($request->safe()->only([
+        $event = $owner->events()->create($request->safe()->only([
             'title', 'description', 'starts_at', 'ends_at', 'is_all_day', 'rrule', 'event_type_id',
         ]));
 

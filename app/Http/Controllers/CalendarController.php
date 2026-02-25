@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\BudgetCategory;
 use App\Models\EventType;
 use App\Models\FamilyMember;
 use App\Services\BudgetService;
@@ -19,9 +20,10 @@ class CalendarController extends Controller
     public function index(Request $request): Response
     {
         $user = $request->user();
-        $ownerId = $user->familyOwnerId();
+        $owner = $user->familyOwner();
+        $ownerId = $owner->id;
 
-        $this->budgetService->seedDefaultCategories($user);
+        $this->budgetService->seedDefaultCategories($owner);
 
         // Seed default event types if none exist yet
         if (! EventType::whereNull('user_id')->exists()) {
@@ -39,7 +41,7 @@ class CalendarController extends Controller
             ->orderBy('name')
             ->get();
 
-        $budgetCategories = $user->budgetCategories()
+        $budgetCategories = BudgetCategory::where('user_id', $ownerId)
             ->orderBy('sort_order')
             ->orderBy('name')
             ->get();

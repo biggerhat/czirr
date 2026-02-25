@@ -58,7 +58,8 @@ class ContactController extends Controller
             'notes' => ['nullable', 'string'],
         ]);
 
-        $contact = $request->user()->contacts()->create($validated);
+        $owner = $request->user()->familyOwner();
+        $contact = $owner->contacts()->create($validated);
 
         $this->syncBirthdayEvent($contact);
 
@@ -67,7 +68,7 @@ class ContactController extends Controller
 
     public function update(Request $request, Contact $contact): JsonResponse
     {
-        if ($contact->user_id !== $request->user()->id) {
+        if ($contact->user_id !== $request->user()->familyOwnerId()) {
             abort(403);
         }
 
@@ -94,7 +95,7 @@ class ContactController extends Controller
 
     public function destroy(Request $request, Contact $contact): JsonResponse
     {
-        if ($contact->user_id !== $request->user()->id) {
+        if ($contact->user_id !== $request->user()->familyOwnerId()) {
             abort(403);
         }
 

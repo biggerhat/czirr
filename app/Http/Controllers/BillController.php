@@ -25,14 +25,15 @@ class BillController extends Controller
             'notes' => ['nullable', 'string'],
         ]);
 
-        $bill = $this->budgetService->createBillWithEvent($request->user(), $validated);
+        $owner = $request->user()->familyOwner();
+        $bill = $this->budgetService->createBillWithEvent($owner, $validated);
 
         return response()->json($bill, 201);
     }
 
     public function update(Request $request, Bill $bill): JsonResponse
     {
-        if ($bill->user_id !== $request->user()->id) {
+        if ($bill->user_id !== $request->user()->familyOwnerId()) {
             abort(403);
         }
 
@@ -53,7 +54,7 @@ class BillController extends Controller
 
     public function destroy(Request $request, Bill $bill): JsonResponse
     {
-        if ($bill->user_id !== $request->user()->id) {
+        if ($bill->user_id !== $request->user()->familyOwnerId()) {
             abort(403);
         }
 

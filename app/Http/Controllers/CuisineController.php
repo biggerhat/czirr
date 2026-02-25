@@ -14,9 +14,9 @@ class CuisineController extends Controller
             'name' => ['required', 'string', 'max:100'],
         ]);
 
-        $user = $request->user();
+        $owner = $request->user()->familyOwner();
 
-        $exists = Cuisine::where('user_id', $user->id)
+        $exists = Cuisine::where('user_id', $owner->id)
             ->where('name', $validated['name'])
             ->exists();
 
@@ -24,14 +24,14 @@ class CuisineController extends Controller
             return response()->json(['errors' => ['name' => ['You already have a cuisine with this name.']]], 422);
         }
 
-        $cuisine = $user->cuisines()->create($validated);
+        $cuisine = $owner->cuisines()->create($validated);
 
         return response()->json($cuisine, 201);
     }
 
     public function destroy(Request $request, Cuisine $cuisine): JsonResponse
     {
-        if ($cuisine->user_id === null || $cuisine->user_id !== $request->user()->id) {
+        if ($cuisine->user_id === null || $cuisine->user_id !== $request->user()->familyOwnerId()) {
             abort(403);
         }
 

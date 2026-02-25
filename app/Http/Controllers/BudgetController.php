@@ -16,21 +16,22 @@ class BudgetController extends Controller
 
     public function index(Request $request): Response
     {
-        $this->budgetService->seedDefaultCategories($request->user());
+        $owner = $request->user()->familyOwner();
+        $this->budgetService->seedDefaultCategories($owner);
 
         $start = $request->input('start');
         $end = $request->input('end');
 
         if ($start && $end) {
             $overview = $this->budgetService->getOverviewForRange(
-                $request->user(),
+                $owner,
                 Carbon::parse($start)->startOfDay(),
                 Carbon::parse($end)->endOfDay(),
             );
         } else {
             $monthParam = $request->input('month');
             $month = $monthParam ? Carbon::parse($monthParam.'-01') : Carbon::now();
-            $overview = $this->budgetService->getMonthlyOverview($request->user(), $month);
+            $overview = $this->budgetService->getMonthlyOverview($owner, $month);
         }
 
         return Inertia::render('budgeting/Index', $overview);

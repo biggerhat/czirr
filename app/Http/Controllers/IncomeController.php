@@ -24,14 +24,15 @@ class IncomeController extends Controller
             'notes' => ['nullable', 'string'],
         ]);
 
-        $income = $this->budgetService->createIncomeWithEvent($request->user(), $validated);
+        $owner = $request->user()->familyOwner();
+        $income = $this->budgetService->createIncomeWithEvent($owner, $validated);
 
         return response()->json($income, 201);
     }
 
     public function update(Request $request, Income $income): JsonResponse
     {
-        if ($income->user_id !== $request->user()->id) {
+        if ($income->user_id !== $request->user()->familyOwnerId()) {
             abort(403);
         }
 
@@ -51,7 +52,7 @@ class IncomeController extends Controller
 
     public function destroy(Request $request, Income $income): JsonResponse
     {
-        if ($income->user_id !== $request->user()->id) {
+        if ($income->user_id !== $request->user()->familyOwnerId()) {
             abort(403);
         }
 

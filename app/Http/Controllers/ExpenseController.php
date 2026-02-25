@@ -19,7 +19,8 @@ class ExpenseController extends Controller
             'bill_id' => ['nullable', 'exists:bills,id'],
         ]);
 
-        $expense = $request->user()->expenses()->create($validated);
+        $owner = $request->user()->familyOwner();
+        $expense = $owner->expenses()->create($validated);
         $expense->load('category');
 
         return response()->json($expense, 201);
@@ -27,7 +28,7 @@ class ExpenseController extends Controller
 
     public function destroy(Request $request, Expense $expense): JsonResponse
     {
-        if ($expense->user_id !== $request->user()->id) {
+        if ($expense->user_id !== $request->user()->familyOwnerId()) {
             abort(403);
         }
 

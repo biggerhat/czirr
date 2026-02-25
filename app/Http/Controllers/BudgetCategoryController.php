@@ -15,17 +15,18 @@ class BudgetCategoryController extends Controller
             'color' => ['required', 'string', 'max:20'],
         ]);
 
-        $maxSort = $request->user()->budgetCategories()->max('sort_order') ?? -1;
+        $owner = $request->user()->familyOwner();
+        $maxSort = $owner->budgetCategories()->max('sort_order') ?? -1;
         $validated['sort_order'] = $maxSort + 1;
 
-        $category = $request->user()->budgetCategories()->create($validated);
+        $category = $owner->budgetCategories()->create($validated);
 
         return response()->json($category, 201);
     }
 
     public function update(Request $request, BudgetCategory $budgetCategory): JsonResponse
     {
-        if ($budgetCategory->user_id !== $request->user()->id) {
+        if ($budgetCategory->user_id !== $request->user()->familyOwnerId()) {
             abort(403);
         }
 
@@ -41,7 +42,7 @@ class BudgetCategoryController extends Controller
 
     public function destroy(Request $request, BudgetCategory $budgetCategory): JsonResponse
     {
-        if ($budgetCategory->user_id !== $request->user()->id) {
+        if ($budgetCategory->user_id !== $request->user()->familyOwnerId()) {
             abort(403);
         }
 
