@@ -4,9 +4,11 @@ namespace Database\Seeders;
 
 use App\Enums\FamilyRole;
 use App\Models\Bill;
+use App\Models\BonusObjective;
 use App\Models\BudgetCategory;
 use App\Models\Chore;
 use App\Models\ChoreAssignment;
+use App\Models\ChoreCompletion;
 use App\Models\Contact;
 use App\Models\Event;
 use App\Models\Expense;
@@ -16,6 +18,7 @@ use App\Models\FamilyMember;
 use App\Models\Income;
 use App\Models\MealPlanEntry;
 use App\Models\Recipe;
+use App\Models\StreakBonus;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Database\Seeder;
@@ -427,10 +430,17 @@ class DatabaseSeeder extends Seeder
         ]);
 
         // --- Chores ---
-        $choreNames = ['Wash dishes', 'Take out trash', 'Vacuum living room', 'Feed the pets', 'Set the table'];
-        $chores = collect($choreNames)->map(fn ($name) => Chore::factory()->create([
+        $choreData = [
+            ['name' => 'Wash dishes', 'points' => 10],
+            ['name' => 'Take out trash', 'points' => 5],
+            ['name' => 'Vacuum living room', 'points' => 15],
+            ['name' => 'Feed the pets', 'points' => 5],
+            ['name' => 'Set the table', 'points' => 5],
+        ];
+        $chores = collect($choreData)->map(fn ($data) => Chore::factory()->create([
             'user_id' => $admin->id,
-            'name' => $name,
+            'name' => $data['name'],
+            'points' => $data['points'],
         ]));
 
         // Assign chores to teen and child members on specific days
@@ -446,11 +456,70 @@ class DatabaseSeeder extends Seeder
             [$chores[4], $childMember, 3],   // Set table - Wed
         ];
 
+        $createdAssignments = [];
         foreach ($assignments as [$chore, $member, $day]) {
-            ChoreAssignment::factory()->create([
+            $createdAssignments[] = ChoreAssignment::factory()->create([
                 'chore_id' => $chore->id,
                 'family_member_id' => $member->id,
                 'day_of_week' => $day,
+            ]);
+        }
+
+        // --- Chore Completions (past 5 days for streak/weekly score demo) ---
+        for ($d = 5; $d >= 1; $d--) {
+            $date = $today->copy()->subDays($d);
+            $dow = $date->dayOfWeek;
+
+            foreach ($createdAssignments as $assignment) {
+                if ($assignment->day_of_week === $dow) {
+                    // ~80% completion rate to show realistic data
+                    if (fake()->boolean(80)) {
+                        $chore = $chores->firstWhere('id', $assignment->chore_id);
+                        ChoreCompletion::create([
+                            'chore_assignment_id' => $assignment->id,
+                            'family_member_id' => $assignment->family_member_id,
+                            'completed_date' => $date->toDateString(),
+                            'points_earned' => $chore->points,
+                        ]);
+                    }
+                }
+            }
+        }
+
+        // --- Bonus Objectives ---
+        BonusObjective::factory()->create([
+            'user_id' => $admin->id,
+            'name' => 'Clean the garage',
+            'description' => 'Sweep, organize tools, and take out old boxes',
+            'points' => 50,
+        ]);
+
+        BonusObjective::factory()->create([
+            'user_id' => $admin->id,
+            'name' => 'Wash the car',
+            'description' => 'Inside and out',
+            'points' => 25,
+        ]);
+
+        BonusObjective::factory()->claimed($teenMember)->create([
+            'user_id' => $admin->id,
+            'name' => 'Organize the pantry',
+            'points' => 30,
+            'claimed_at' => $today->copy()->subDays(2),
+        ]);
+
+        BonusObjective::factory()->claimed($childMember)->create([
+            'user_id' => $admin->id,
+            'name' => 'Sort recycling',
+            'points' => 15,
+            'claimed_at' => $today->copy()->subDays(4),
+        ]);
+
+        // --- Streak Bonuses ---
+        foreach (\Database\Factories\StreakBonusFactory::defaultMilestones() as $milestone) {
+            StreakBonus::create([
+                'user_id' => $admin->id,
+                ...$milestone,
             ]);
         }
 

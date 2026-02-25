@@ -30,6 +30,7 @@ class ChoreFactory extends Factory
             'name' => fake()->randomElement(self::CHORE_NAMES),
             'description' => fake()->optional(0.3)->sentence(),
             'is_active' => true,
+            'points' => fake()->numberBetween(5, 25),
         ];
     }
 

@@ -2,37 +2,39 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 
-class Chore extends Model
+class BonusObjective extends Model
 {
     use HasFactory;
 
     protected $fillable = [
+        'user_id',
         'name',
         'description',
-        'is_active',
         'points',
+        'claimed_by',
+        'claimed_at',
     ];
 
     protected function casts(): array
     {
         return [
-            'is_active' => 'boolean',
+            'claimed_at' => 'datetime',
             'points' => 'integer',
         ];
     }
 
-    public function user(): BelongsTo
+    public function claimedByMember(): BelongsTo
     {
-        return $this->belongsTo(User::class);
+        return $this->belongsTo(FamilyMember::class, 'claimed_by');
     }
 
-    public function assignments(): HasMany
+    public function scopeAvailable(Builder $query): Builder
     {
-        return $this->hasMany(ChoreAssignment::class);
+        return $query->whereNull('claimed_by');
     }
 }

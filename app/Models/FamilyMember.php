@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
  * @property-read User|null $linkedUser
@@ -48,5 +49,10 @@ class FamilyMember extends Model
     {
         return $this->belongsToMany(Event::class, 'event_family_member')
             ->withTimestamps();
+    }
+
+    public function choreCompletions(): HasMany
+    {
+        return $this->hasMany(ChoreCompletion::class);
     }
 }

@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { Head } from '@inertiajs/vue3';
-import { CookingPot } from 'lucide-vue-next';
+import { Head, Link } from '@inertiajs/vue3';
+import { CookingPot, Flame, Medal, Trophy } from 'lucide-vue-next';
 import { ref, onMounted } from 'vue';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
@@ -11,7 +11,7 @@ import { EVENT_COLORS, getEventColor, formatEventTime } from '@/lib/calendar';
 import { type BreadcrumbItem } from '@/types';
 import type { UpcomingBill } from '@/types/budgeting';
 import type { CalendarEvent } from '@/types/calendar';
-import type { ChoreAssignment } from '@/types/chores';
+import type { ChoreAssignment, MemberScore } from '@/types/chores';
 import type { FamilyList, FamilyListItem } from '@/types/lists';
 import type { MealType } from '@/types/meal-plans';
 import { MEAL_TYPE_LABELS } from '@/types/meal-plans';
@@ -28,6 +28,7 @@ const props = defineProps<{
     todaysChores: ChoreAssignment[];
     todaysMeals: DashboardMeal[];
     pinnedLists: FamilyList[];
+    scoreboardSummary: MemberScore[];
     can: {
         viewBills: boolean;
         viewEvents: boolean;
@@ -36,6 +37,8 @@ const props = defineProps<{
         viewLists: boolean;
     };
 }>();
+
+const medalColors = ['text-yellow-500', 'text-gray-400', 'text-amber-700'];
 
 const mealTypeColors: Record<MealType, string> = {
     breakfast: 'bg-amber-500',
@@ -250,6 +253,55 @@ function pinnedListProgress(list: FamilyList): string {
                                 </div>
                             </li>
                         </ul>
+                    </CardContent>
+                </Card>
+
+                <!-- Scoreboard Summary -->
+                <Card v-if="can.viewChores && scoreboardSummary.length > 0">
+                    <CardHeader class="flex-row items-center justify-between space-y-0">
+                        <CardTitle class="flex items-center gap-2">
+                            <Trophy class="h-4 w-4" />
+                            This Week's Top
+                        </CardTitle>
+                        <Link href="/scoreboard" class="text-xs text-primary hover:underline">
+                            View all &rarr;
+                        </Link>
+                    </CardHeader>
+                    <CardContent>
+                        <div class="space-y-2">
+                            <div
+                                v-for="(score, i) in scoreboardSummary"
+                                :key="score.family_member_id"
+                                class="flex items-center gap-2 rounded-lg border px-2.5 py-2 transition-colors sm:gap-3 sm:px-3"
+                                :class="[
+                                    i === 0 ? 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800' :
+                                    i === 1 ? 'bg-gray-50 dark:bg-gray-800/30 border-gray-200 dark:border-gray-700' :
+                                    i === 2 ? 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800' :
+                                    'border-transparent'
+                                ]"
+                            >
+                                <Medal class="h-4 w-4 shrink-0" :class="medalColors[i]" />
+                                <span
+                                    class="h-2.5 w-2.5 shrink-0 rounded-full"
+                                    :class="EVENT_COLORS[score.color as keyof typeof EVENT_COLORS]?.dot ?? 'bg-gray-400'"
+                                />
+                                <div class="flex-1 min-w-0">
+                                    <span class="text-sm font-medium truncate block">{{ score.name }}</span>
+                                    <span class="hidden text-xs text-muted-foreground sm:inline">
+                                        {{ score.chore_points }} chores<template v-if="score.bonus_points"> + {{ score.bonus_points }} bonus</template>
+                                    </span>
+                                </div>
+                                <span class="text-sm font-semibold tabular-nums shrink-0">{{ score.weekly_total }} pts</span>
+                                <span
+                                    v-if="score.streak >= 3"
+                                    class="flex items-center gap-0.5 shrink-0 rounded-full px-1.5 py-0.5 text-xs font-medium"
+                                    :class="score.streak >= 7 ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300' : 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300'"
+                                >
+                                    <Flame class="h-3 w-3" />
+                                    {{ score.streak }}
+                                </span>
+                            </div>
+                        </div>
                     </CardContent>
                 </Card>
 

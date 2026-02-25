@@ -1,10 +1,12 @@
 <?php
 
 use App\Http\Controllers\BillController;
+use App\Http\Controllers\BonusObjectiveController;
 use App\Http\Controllers\BudgetCategoryController;
 use App\Http\Controllers\BudgetController;
 use App\Http\Controllers\CalendarController;
 use App\Http\Controllers\ChoreAssignmentController;
+use App\Http\Controllers\ChoreCompletionController;
 use App\Http\Controllers\ChoreController;
 use App\Http\Controllers\ContactController;
 use App\Http\Controllers\CookbookController;
@@ -21,6 +23,7 @@ use App\Http\Controllers\MealPlanController;
 use App\Http\Controllers\RecipeController;
 use App\Http\Controllers\RecipeTagController;
 use App\Http\Controllers\RoleController;
+use App\Http\Controllers\ScoreboardController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -105,6 +108,16 @@ Route::middleware(['auth', 'verified', 'family'])->group(function () {
     Route::put('chores/{chore}', [ChoreController::class, 'update'])->middleware('permission:chores.edit');
     Route::delete('chores/{chore}', [ChoreController::class, 'destroy'])->middleware('permission:chores.delete');
     Route::post('chore-assignments/toggle', [ChoreAssignmentController::class, 'toggle'])->middleware('permission:chores.assign');
+    Route::post('chore-completions/toggle', [ChoreCompletionController::class, 'toggle'])->middleware('permission:chores.view');
+
+    // Bonus Objectives
+    Route::post('bonus-objectives', [BonusObjectiveController::class, 'store'])->middleware('permission:chores.create');
+    Route::put('bonus-objectives/{bonusObjective}', [BonusObjectiveController::class, 'update'])->middleware('permission:chores.edit');
+    Route::delete('bonus-objectives/{bonusObjective}', [BonusObjectiveController::class, 'destroy'])->middleware('permission:chores.delete');
+    Route::post('bonus-objectives/{bonusObjective}/claim', [BonusObjectiveController::class, 'claim'])->middleware('permission:chores.view');
+
+    // Scoreboard
+    Route::get('scoreboard', [ScoreboardController::class, 'index'])->middleware('permission:chores.view')->name('scoreboard.index');
 
     // Contacts
     Route::get('contacts', [ContactController::class, 'index'])->name('contacts.index');
