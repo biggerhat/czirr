@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Link, router } from '@inertiajs/vue3';
-import { Pencil, Pin, PinOff, Plus, ShoppingCart, ShoppingBag, CheckSquare, Heart, List, Trash2 } from 'lucide-vue-next';
+import { ClipboardList, Pencil, Pin, PinOff, Plus, ShoppingCart, ShoppingBag, CheckSquare, Heart, List, Trash2 } from 'lucide-vue-next';
 import { ref } from 'vue';
 import ListModal from '@/components/lists/ListModal.vue';
 import { Badge } from '@/components/ui/badge';
@@ -107,8 +107,10 @@ async function togglePin(list: FamilyList) {
             </div>
 
             <!-- Empty state -->
-            <div v-if="lists.length === 0" class="rounded-lg border border-dashed p-8 text-center text-muted-foreground">
-                No lists yet. Click "New List" to get started.
+            <div v-if="lists.length === 0" class="rounded-lg border border-dashed p-8 text-center">
+                <ClipboardList class="mx-auto mb-2 h-8 w-8 text-muted-foreground/30" />
+                <p class="text-sm text-muted-foreground">No lists yet.</p>
+                <p class="mt-1 text-xs text-muted-foreground/70">Click "New List" to get started.</p>
             </div>
 
             <!-- Card grid -->

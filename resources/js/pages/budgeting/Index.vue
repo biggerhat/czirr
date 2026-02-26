@@ -1,13 +1,24 @@
 <script setup lang="ts">
 import { router } from '@inertiajs/vue3';
-import { CalendarRange, Check, DollarSign, LayoutGrid, List, Pencil, Plus, Receipt, Trash2, X } from 'lucide-vue-next';
+import {
+    CalendarRange,
+    Check,
+    ChevronLeft,
+    ChevronRight,
+    DollarSign,
+    LayoutGrid,
+    List,
+    Pencil,
+    Plus,
+    Receipt,
+    Trash2,
+    X,
+} from 'lucide-vue-next';
 import { ref, computed } from 'vue';
 import BillModal from '@/components/budgeting/BillModal.vue';
-import BudgetToolbar from '@/components/budgeting/BudgetToolbar.vue';
 import ExpenseModal from '@/components/budgeting/ExpenseModal.vue';
 import IncomeModal from '@/components/budgeting/IncomeModal.vue';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
     Dialog,
     DialogContent,
@@ -69,6 +80,8 @@ const isCustomRange = computed(() => {
     const monthEnd = `${y}-${String(m).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
     return props.start_date !== monthStart || props.end_date !== monthEnd;
 });
+
+const showDateRange = ref(isCustomRange.value);
 
 const rangeTitle = computed(() => {
     if (!isCustomRange.value) return monthTitle.value;
@@ -266,16 +279,31 @@ function getCategoryDotClass(category: BudgetCategory): string {
 <template>
     <AppLayout :breadcrumbs="breadcrumbs">
         <div class="flex h-full flex-1 flex-col gap-4 p-4">
-            <BudgetToolbar
-                :title="rangeTitle"
-                @prev="navigateMonth(-1)"
-                @next="navigateMonth(1)"
-                @today="goToday"
-            />
+            <!-- Header: nav + title + date range toggle -->
+            <div class="flex items-center gap-2">
+                <Button variant="outline" size="icon" @click="navigateMonth(-1)">
+                    <ChevronLeft class="h-4 w-4" />
+                </Button>
+                <Button variant="outline" size="icon" @click="navigateMonth(1)">
+                    <ChevronRight class="h-4 w-4" />
+                </Button>
+                <Button variant="outline" size="sm" @click="goToday">
+                    Today
+                </Button>
+                <h2 class="text-lg font-semibold ml-2 flex-1 truncate">{{ rangeTitle }}</h2>
+                <Button
+                    variant="ghost"
+                    size="icon"
+                    class="h-8 w-8"
+                    :class="{ 'bg-accent': showDateRange }"
+                    @click="showDateRange = !showDateRange"
+                >
+                    <CalendarRange class="h-4 w-4" />
+                </Button>
+            </div>
 
-            <!-- Date Range -->
-            <div class="flex flex-col sm:flex-row sm:items-center gap-2 -mt-2">
-                <CalendarRange class="h-4 w-4 shrink-0 text-muted-foreground hidden sm:block" />
+            <!-- Collapsible Date Range -->
+            <div v-if="showDateRange" class="flex flex-col sm:flex-row sm:items-center gap-2">
                 <Input type="date" v-model="rangeStart" class="w-full sm:w-[160px] h-8 text-sm" />
                 <span class="text-sm text-muted-foreground hidden sm:inline">to</span>
                 <Input type="date" v-model="rangeEnd" class="w-full sm:w-[160px] h-8 text-sm" />
@@ -290,58 +318,34 @@ function getCategoryDotClass(category: BudgetCategory): string {
                 </div>
             </div>
 
-            <!-- Summary Cards -->
-            <div class="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 lg:grid-cols-6">
-                <Card>
-                    <CardHeader class="pb-2">
-                        <CardTitle class="text-sm font-medium text-muted-foreground">Total Income</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <p class="text-xl sm:text-2xl font-bold text-emerald-600 dark:text-emerald-400">{{ formatCurrency(totalIncome) }}</p>
-                    </CardContent>
-                </Card>
-                <Card>
-                    <CardHeader class="pb-2">
-                        <CardTitle class="text-sm font-medium text-muted-foreground">Total Bills</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <p class="text-xl sm:text-2xl font-bold">{{ formatCurrency(totalBills) }}</p>
-                    </CardContent>
-                </Card>
-                <Card>
-                    <CardHeader class="pb-2">
-                        <CardTitle class="text-sm font-medium text-muted-foreground">Paid</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <p class="text-xl sm:text-2xl font-bold text-emerald-600 dark:text-emerald-400">{{ formatCurrency(totalPaid) }}</p>
-                    </CardContent>
-                </Card>
-                <Card>
-                    <CardHeader class="pb-2">
-                        <CardTitle class="text-sm font-medium text-muted-foreground">Unpaid</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <p class="text-xl sm:text-2xl font-bold text-rose-600 dark:text-rose-400">{{ formatCurrency(totalUnpaid) }}</p>
-                    </CardContent>
-                </Card>
-                <Card>
-                    <CardHeader class="pb-2">
-                        <CardTitle class="text-sm font-medium text-muted-foreground">Total Expenses</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <p class="text-xl sm:text-2xl font-bold">{{ formatCurrency(totalExpenses) }}</p>
-                    </CardContent>
-                </Card>
-                <Card>
-                    <CardHeader class="pb-2">
-                        <CardTitle class="text-sm font-medium text-muted-foreground">Net</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <p class="text-xl sm:text-2xl font-bold" :class="netBalance >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'">
-                            {{ formatCurrency(netBalance) }}
-                        </p>
-                    </CardContent>
-                </Card>
+            <!-- Summary Stats -->
+            <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-px rounded-lg border bg-border overflow-hidden">
+                <div class="bg-card p-3">
+                    <p class="text-xs font-medium text-muted-foreground">Income</p>
+                    <p class="text-lg font-bold text-emerald-600 dark:text-emerald-400">{{ formatCurrency(totalIncome) }}</p>
+                </div>
+                <div class="bg-card p-3">
+                    <p class="text-xs font-medium text-muted-foreground">Bills</p>
+                    <p class="text-lg font-bold">{{ formatCurrency(totalBills) }}</p>
+                </div>
+                <div class="bg-card p-3">
+                    <p class="text-xs font-medium text-muted-foreground">Paid</p>
+                    <p class="text-lg font-bold text-emerald-600 dark:text-emerald-400">{{ formatCurrency(totalPaid) }}</p>
+                </div>
+                <div class="bg-card p-3">
+                    <p class="text-xs font-medium text-muted-foreground">Unpaid</p>
+                    <p class="text-lg font-bold text-rose-600 dark:text-rose-400">{{ formatCurrency(totalUnpaid) }}</p>
+                </div>
+                <div class="bg-card p-3">
+                    <p class="text-xs font-medium text-muted-foreground">Expenses</p>
+                    <p class="text-lg font-bold">{{ formatCurrency(totalExpenses) }}</p>
+                </div>
+                <div class="bg-card p-3">
+                    <p class="text-xs font-medium text-muted-foreground">Net</p>
+                    <p class="text-lg font-bold" :class="netBalance >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'">
+                        {{ formatCurrency(netBalance) }}
+                    </p>
+                </div>
             </div>
 
             <!-- Income Section -->
@@ -353,8 +357,10 @@ function getCategoryDotClass(category: BudgetCategory): string {
                         Add Income
                     </Button>
                 </div>
-                <div v-if="incomes.length === 0" class="rounded-lg border border-dashed p-8 text-center text-muted-foreground">
-                    No income sources yet. Click "Add Income" to get started.
+                <div v-if="incomes.length === 0" class="rounded-lg border border-dashed p-8 text-center">
+                    <DollarSign class="mx-auto mb-2 h-8 w-8 text-muted-foreground/30" />
+                    <p class="text-sm text-muted-foreground">No income sources yet.</p>
+                    <p class="mt-1 text-xs text-muted-foreground/70">Click "Add Income" to get started.</p>
                 </div>
                 <div v-else class="space-y-2">
                     <div
@@ -422,11 +428,15 @@ function getCategoryDotClass(category: BudgetCategory): string {
                         </Button>
                     </div>
                 </div>
-                <div v-if="bills.length === 0" class="rounded-lg border border-dashed p-8 text-center text-muted-foreground">
-                    No bills yet. Click "Add Bill" to get started.
+                <div v-if="bills.length === 0" class="rounded-lg border border-dashed p-8 text-center">
+                    <Receipt class="mx-auto mb-2 h-8 w-8 text-muted-foreground/30" />
+                    <p class="text-sm text-muted-foreground">No bills yet.</p>
+                    <p class="mt-1 text-xs text-muted-foreground/70">Click "Add Bill" to get started.</p>
                 </div>
-                <div v-else-if="filteredBills.length === 0" class="rounded-lg border border-dashed p-8 text-center text-muted-foreground">
-                    No bills in this category.
+                <div v-else-if="filteredBills.length === 0" class="rounded-lg border border-dashed p-8 text-center">
+                    <Receipt class="mx-auto mb-2 h-8 w-8 text-muted-foreground/30" />
+                    <p class="text-sm text-muted-foreground">No bills in this category.</p>
+                    <p class="mt-1 text-xs text-muted-foreground/70">Try selecting a different category.</p>
                 </div>
 
                 <!-- Grouped view -->
@@ -537,8 +547,10 @@ function getCategoryDotClass(category: BudgetCategory): string {
                         Add Expense
                     </Button>
                 </div>
-                <div v-if="expenses.length === 0" class="rounded-lg border border-dashed p-8 text-center text-muted-foreground">
-                    No expenses this month.
+                <div v-if="expenses.length === 0" class="rounded-lg border border-dashed p-8 text-center">
+                    <Receipt class="mx-auto mb-2 h-8 w-8 text-muted-foreground/30" />
+                    <p class="text-sm text-muted-foreground">No expenses this month.</p>
+                    <p class="mt-1 text-xs text-muted-foreground/70">Expenses and bill payments will appear here.</p>
                 </div>
                 <div v-else class="space-y-2">
                     <div

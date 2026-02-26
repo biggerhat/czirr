@@ -54,28 +54,28 @@ const hasFooterContent = computed(() =>
 
                 <CardContent class="space-y-4">
                     <!-- Stat tiles -->
-                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                        <div class="bg-muted rounded-lg p-3 flex items-center gap-2.5">
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-px rounded-lg border bg-border overflow-hidden">
+                        <div class="bg-card p-2.5 flex items-center gap-2">
                             <Badge :class="DIFFICULTY_COLORS[recipe.difficulty]" variant="secondary">
                                 {{ DIFFICULTY_LABELS[recipe.difficulty] }}
                             </Badge>
                         </div>
-                        <div class="bg-muted rounded-lg p-3 flex items-center gap-2.5">
-                            <Timer class="h-4 w-4 text-muted-foreground shrink-0" />
+                        <div class="bg-card p-2.5 flex items-center gap-2">
+                            <Timer class="h-3.5 w-3.5 text-muted-foreground shrink-0" />
                             <div class="text-sm">
                                 <span class="font-medium">{{ recipe.prep_time }}m</span>
                                 <span class="text-muted-foreground"> prep</span>
                             </div>
                         </div>
-                        <div class="bg-muted rounded-lg p-3 flex items-center gap-2.5">
-                            <Clock class="h-4 w-4 text-muted-foreground shrink-0" />
+                        <div class="bg-card p-2.5 flex items-center gap-2">
+                            <Clock class="h-3.5 w-3.5 text-muted-foreground shrink-0" />
                             <div class="text-sm">
                                 <span class="font-medium">{{ recipe.cook_time }}m</span>
                                 <span class="text-muted-foreground"> cook</span>
                             </div>
                         </div>
-                        <div class="bg-muted rounded-lg p-3 flex items-center gap-2.5">
-                            <Users class="h-4 w-4 text-muted-foreground shrink-0" />
+                        <div class="bg-card p-2.5 flex items-center gap-2">
+                            <Users class="h-3.5 w-3.5 text-muted-foreground shrink-0" />
                             <div class="text-sm">
                                 <span class="font-medium">{{ recipe.servings }}</span>
                                 <span class="text-muted-foreground"> {{ recipe.servings === 1 ? 'serving' : 'servings' }}</span>

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Head } from '@inertiajs/vue3';
-import { Pencil, Trash2, Plus, Check, X, Link as LinkIcon, Unlink as UnlinkIcon, Lock, Shield } from 'lucide-vue-next';
+import { Pencil, Trash2, Plus, Check, X, Link as LinkIcon, Unlink as UnlinkIcon, Lock, Shield, Users } from 'lucide-vue-next';
 import { ref, computed } from 'vue';
 import Heading from '@/components/Heading.vue';
 import { Button } from '@/components/ui/button';
@@ -51,6 +51,7 @@ const props = defineProps<{
     roles: RoleData[];
     availablePermissions: Record<string, PermissionGroup>;
     canManageRoles: boolean;
+    can: { create: boolean; edit: boolean; delete: boolean };
 }>();
 
 const breadcrumbItems: BreadcrumbItem[] = [
@@ -452,7 +453,7 @@ function formatModuleName(module: string): string {
                 />
 
                 <!-- Add form -->
-                <div class="rounded-md border p-4 space-y-3">
+                <div v-if="can.create" class="rounded-md border p-4 space-y-3">
                     <div class="text-sm font-medium">Add family member</div>
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <div class="space-y-1.5">
@@ -617,57 +618,67 @@ function formatModuleName(module: string): string {
 
                         <!-- Display mode -->
                         <template v-else>
-                            <div class="flex items-center gap-3">
-                                <div :class="['w-3 h-3 rounded-full shrink-0', EVENT_COLORS[member.color]?.dot ?? 'bg-blue-500']" />
-                                <div class="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-0 flex-1 min-w-0">
-                                    <span class="text-sm font-medium">{{ member.nickname ?? member.name }}</span>
-                                    <span v-if="member.nickname" class="text-sm text-muted-foreground sm:ml-1.5">({{ member.name }})</span>
-                                    <div class="flex flex-wrap items-center gap-1 sm:ml-1.5">
-                                        <span v-if="member.spatie_role" class="inline-flex items-center gap-1 px-1.5 py-0.5 text-xs font-medium rounded bg-primary/10 text-primary">
-                                            <Shield class="h-3 w-3" />
-                                            {{ member.spatie_role }}
-                                        </span>
-                                        <span :class="[
-                                            'inline-flex items-center px-1.5 py-0.5 text-xs rounded',
-                                            'bg-muted/50 text-muted-foreground/70',
-                                        ]">{{ member.role }}</span>
-                                        <span v-if="member.linked_user" class="inline-flex items-center gap-1 text-xs text-muted-foreground">
-                                            <LinkIcon class="h-3 w-3" />
-                                            {{ member.linked_user.email }}
-                                        </span>
-                                        <span v-else class="inline-flex items-center gap-1 text-xs text-muted-foreground/50">
-                                            <UnlinkIcon class="h-3 w-3" />
-                                            No account
-                                        </span>
+                            <div class="space-y-1">
+                                <!-- Line 1: color dot + name (left) + actions (right) -->
+                                <div class="flex items-center gap-3">
+                                    <div :class="['w-3 h-3 rounded-full shrink-0', EVENT_COLORS[member.color]?.dot ?? 'bg-blue-500']" />
+                                    <div class="flex-1 min-w-0">
+                                        <span class="text-sm font-medium">{{ member.nickname ?? member.name }}</span>
+                                        <span v-if="member.nickname" class="text-sm text-muted-foreground ml-1.5">({{ member.name }})</span>
+                                    </div>
+                                    <div class="flex items-center gap-1 shrink-0">
+                                        <!-- Spatie role dropdown for linked members -->
+                                        <Select
+                                            v-if="canManageRoles && can.edit && member.linked_user"
+                                            :model-value="member.spatie_role ?? ''"
+                                            @update:model-value="updateMemberSpatieRole(member, String($event))"
+                                        >
+                                            <SelectTrigger class="h-7 w-[110px] text-xs">
+                                                <SelectValue placeholder="Role" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem v-for="role in roles" :key="role.id" :value="role.name">
+                                                    {{ role.name }}
+                                                </SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                        <Button v-if="can.edit" variant="ghost" size="icon" class="h-8 w-8" @click="startEdit(member)">
+                                            <Pencil class="h-3.5 w-3.5" />
+                                        </Button>
+                                        <Button v-if="can.delete" variant="ghost" size="icon" class="h-8 w-8 text-destructive" @click="openDeleteMember(member)">
+                                            <Trash2 class="h-3.5 w-3.5" />
+                                        </Button>
                                     </div>
                                 </div>
-                                <!-- Spatie role dropdown for linked members -->
-                                <Select
-                                    v-if="canManageRoles && member.linked_user"
-                                    :model-value="member.spatie_role ?? ''"
-                                    @update:model-value="updateMemberSpatieRole(member, String($event))"
-                                >
-                                    <SelectTrigger class="h-7 w-full sm:w-[110px] text-xs">
-                                        <SelectValue placeholder="Role" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem v-for="role in roles" :key="role.id" :value="role.name">
-                                            {{ role.name }}
-                                        </SelectItem>
-                                    </SelectContent>
-                                </Select>
-                                <Button variant="ghost" size="icon" class="h-8 w-8 shrink-0" @click="startEdit(member)">
-                                    <Pencil class="h-3.5 w-3.5" />
-                                </Button>
-                                <Button variant="ghost" size="icon" class="h-8 w-8 shrink-0 text-destructive" @click="openDeleteMember(member)">
-                                    <Trash2 class="h-3.5 w-3.5" />
-                                </Button>
+                                <!-- Line 2: badges -->
+                                <div class="flex flex-wrap items-center gap-1 pl-6">
+                                    <span v-if="member.spatie_role" class="inline-flex items-center gap-1 px-1.5 py-0.5 text-xs font-medium rounded bg-primary/10 text-primary">
+                                        <Shield class="h-3 w-3" />
+                                        {{ member.spatie_role }}
+                                    </span>
+                                    <span :class="[
+                                        'inline-flex items-center px-1.5 py-0.5 text-xs rounded',
+                                        'bg-muted/50 text-muted-foreground/70',
+                                    ]">{{ member.role }}</span>
+                                    <span v-if="member.linked_user" class="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                                        <LinkIcon class="h-3 w-3" />
+                                        {{ member.linked_user.email }}
+                                    </span>
+                                    <span v-else class="inline-flex items-center gap-1 text-xs text-muted-foreground/50">
+                                        <UnlinkIcon class="h-3 w-3" />
+                                        No account
+                                    </span>
+                                </div>
                             </div>
                         </template>
                     </div>
                 </div>
-                <div v-else class="rounded-lg border border-dashed p-8 text-center text-muted-foreground">
-                    No family members yet. Add one above to get started.
+                <div v-else class="rounded-lg border border-dashed p-8 text-center">
+                    <Users class="mx-auto mb-2 h-8 w-8 text-muted-foreground/30" />
+                    <p class="text-sm text-muted-foreground">No family members yet.</p>
+                    <p class="mt-1 text-xs text-muted-foreground/70">
+                        Add family members to assign them to events, chores, and more.
+                    </p>
                 </div>
 
                 <!-- Delete member dialog -->

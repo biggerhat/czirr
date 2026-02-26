@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { router } from '@inertiajs/vue3';
-import { Mail, MapPin, Pencil, Phone, Plus, Search, Trash2 } from 'lucide-vue-next';
+import { Mail, MapPin, Pencil, Phone, Plus, Search, Trash2, Users } from 'lucide-vue-next';
 import { ref } from 'vue';
 import ContactModal from '@/components/contacts/ContactModal.vue';
 import { Button } from '@/components/ui/button';
@@ -121,12 +121,16 @@ function formatLocation(contact: Contact): string {
             </div>
 
             <!-- Empty state -->
-            <div v-if="contacts.length === 0" class="rounded-lg border border-dashed p-8 text-center text-muted-foreground">
+            <div v-if="contacts.length === 0" class="rounded-lg border border-dashed p-8 text-center">
                 <template v-if="search">
-                    No contacts match "{{ search }}".
+                    <Search class="mx-auto mb-2 h-8 w-8 text-muted-foreground/30" />
+                    <p class="text-sm text-muted-foreground">No contacts match "{{ search }}".</p>
+                    <p class="mt-1 text-xs text-muted-foreground/70">Try a different search term.</p>
                 </template>
                 <template v-else>
-                    No contacts yet. Click "Add Contact" to get started.
+                    <Users class="mx-auto mb-2 h-8 w-8 text-muted-foreground/30" />
+                    <p class="text-sm text-muted-foreground">No contacts yet.</p>
+                    <p class="mt-1 text-xs text-muted-foreground/70">Click "Add Contact" to get started.</p>
                 </template>
             </div>
 

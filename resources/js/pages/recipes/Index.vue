@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Link, router } from '@inertiajs/vue3';
-import { BookOpen, Pencil, Plus, Search, Trash2, X } from 'lucide-vue-next';
+import { BookOpen, CookingPot, Pencil, Plus, Search, Trash2, X } from 'lucide-vue-next';
 import { ref, computed } from 'vue';
 import RecipeCard from '@/components/recipes/RecipeCard.vue';
 import { Badge } from '@/components/ui/badge';
@@ -307,14 +307,20 @@ async function confirmDelete() {
             </div>
 
             <!-- Empty state -->
-            <div v-if="recipes.length === 0" class="rounded-lg border border-dashed p-8 text-center text-muted-foreground">
-                No recipes yet. {{ can.create ? 'Click "New Recipe" to get started.' : '' }}
+            <div v-if="recipes.length === 0" class="rounded-lg border border-dashed p-8 text-center">
+                <CookingPot class="mx-auto mb-2 h-8 w-8 text-muted-foreground/30" />
+                <p class="text-sm text-muted-foreground">No recipes yet.</p>
+                <p v-if="can.create" class="mt-1 text-xs text-muted-foreground/70">Click "New Recipe" to get started.</p>
             </div>
 
             <!-- No results after filtering -->
-            <div v-else-if="filteredRecipes.length === 0" class="rounded-lg border border-dashed p-8 text-center text-muted-foreground">
-                No recipes match your filters.
-                <button class="text-primary hover:underline ml-1" @click="clearFilters">Clear filters</button>
+            <div v-else-if="filteredRecipes.length === 0" class="rounded-lg border border-dashed p-8 text-center">
+                <Search class="mx-auto mb-2 h-8 w-8 text-muted-foreground/30" />
+                <p class="text-sm text-muted-foreground">No recipes match your filters.</p>
+                <p class="mt-1 text-xs text-muted-foreground/70">
+                    Try a different search or
+                    <button class="text-primary hover:underline" @click="clearFilters">clear filters</button>.
+                </p>
             </div>
 
             <!-- Grouped recipe grid -->
