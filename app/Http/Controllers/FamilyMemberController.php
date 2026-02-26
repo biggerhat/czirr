@@ -78,6 +78,11 @@ class FamilyMemberController extends Controller
             'roles' => $roles,
             'availablePermissions' => Permission::grouped(),
             'canManageRoles' => $user->can('roles.manage'),
+            'can' => [
+                'create' => $user->can('family.create'),
+                'edit' => $user->can('family.edit'),
+                'delete' => $user->can('family.delete'),
+            ],
         ]);
     }
 
