@@ -18,6 +18,7 @@ const frequencyOptions: { value: RecurrenceFrequency; label: string }[] = [
     { value: 'daily', label: 'Daily' },
     { value: 'weekday', label: 'Every weekday (Mon–Fri)' },
     { value: 'weekly', label: 'Weekly' },
+    { value: 'biweekly', label: 'Bi-weekly' },
     { value: 'monthly', label: 'Monthly' },
     { value: 'yearly', label: 'Yearly' },
 ];
@@ -91,8 +92,8 @@ function setCount(e: Event) {
         </div>
 
         <template v-if="model.frequency !== 'none'">
-            <!-- Interval (not shown for weekday preset) -->
-            <div v-if="model.frequency !== 'weekday'" class="space-y-2">
+            <!-- Interval (not shown for weekday/biweekly presets) -->
+            <div v-if="model.frequency !== 'weekday' && model.frequency !== 'biweekly'" class="space-y-2">
                 <Label>Every</Label>
                 <div class="flex items-center gap-2">
                     <Input
@@ -107,8 +108,8 @@ function setCount(e: Event) {
                 </div>
             </div>
 
-            <!-- Day-of-week (weekly only, not shown for weekday preset) -->
-            <div v-if="model.frequency === 'weekly'" class="space-y-2">
+            <!-- Day-of-week (weekly/biweekly, not shown for weekday preset) -->
+            <div v-if="model.frequency === 'weekly' || model.frequency === 'biweekly'" class="space-y-2">
                 <Label>On days</Label>
                 <div class="flex gap-1">
                     <button

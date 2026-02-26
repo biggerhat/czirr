@@ -1,7 +1,7 @@
 import type { Weekday } from 'rrule';
 import { RRule } from 'rrule';
 
-export type RecurrenceFrequency = 'none' | 'daily' | 'weekday' | 'weekly' | 'monthly' | 'yearly';
+export type RecurrenceFrequency = 'none' | 'daily' | 'weekday' | 'weekly' | 'biweekly' | 'monthly' | 'yearly';
 export type RecurrenceEndType = 'never' | 'until' | 'count';
 
 export type RecurrenceConfig = {
@@ -46,15 +46,16 @@ export function buildRRuleString(config: RecurrenceConfig): string | null {
     if (config.frequency === 'none') return null;
 
     const isWeekday = config.frequency === 'weekday';
+    const isBiweekly = config.frequency === 'biweekly';
 
     const options: Partial<ConstructorParameters<typeof RRule>[0]> = {
-        freq: isWeekday ? RRule.WEEKLY : FREQ_MAP[config.frequency],
-        interval: isWeekday ? 1 : config.interval,
+        freq: isWeekday || isBiweekly ? RRule.WEEKLY : FREQ_MAP[config.frequency],
+        interval: isWeekday ? 1 : isBiweekly ? 2 : config.interval,
     };
 
     if (isWeekday) {
         options.byweekday = [RRule.MO, RRule.TU, RRule.WE, RRule.TH, RRule.FR];
-    } else if (config.frequency === 'weekly' && config.byWeekday.length > 0) {
+    } else if ((config.frequency === 'weekly' || isBiweekly) && config.byWeekday.length > 0) {
         options.byweekday = config.byWeekday.map(d => WEEKDAY_OBJECTS[d]);
     }
 
@@ -112,6 +113,12 @@ export function parseRRuleString(rrule: string | null | undefined): RecurrenceCo
             }
         }
 
+        // Detect bi-weekly pattern: weekly with interval 2
+        if (config.frequency === 'weekly' && config.interval === 2) {
+            config.frequency = 'biweekly';
+            config.interval = 1;
+        }
+
         if (opts.until) {
             config.endType = 'until';
             const dt = opts.until;
@@ -146,6 +153,22 @@ export function humanReadableRRule(rrule: string | null | undefined): string {
 
     if (config.frequency === 'weekday') {
         let text = 'Every weekday';
+        if (config.endType === 'until' && config.untilDate) {
+            text += ` until ${config.untilDate}`;
+        } else if (config.endType === 'count' && config.count) {
+            text += `, ${config.count} times`;
+        }
+        return text;
+    }
+
+    if (config.frequency === 'biweekly') {
+        let text = 'Every 2 weeks';
+        if (config.byWeekday.length > 0) {
+            const dayNames = config.byWeekday
+                .sort((a, b) => a - b)
+                .map(d => DAY_NAMES[d]);
+            text += ` on ${dayNames.join(', ')}`;
+        }
         if (config.endType === 'until' && config.untilDate) {
             text += ` until ${config.untilDate}`;
         } else if (config.endType === 'count' && config.count) {
