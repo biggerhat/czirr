@@ -24,6 +24,7 @@ use App\Http\Controllers\RecipeController;
 use App\Http\Controllers\RecipeTagController;
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\ScoreboardController;
+use App\Http\Controllers\YahtzeeGameController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -118,6 +119,15 @@ Route::middleware(['auth', 'verified', 'family'])->group(function () {
 
     // Scoreboard
     Route::get('scoreboard', [ScoreboardController::class, 'index'])->middleware('permission:chores.view')->name('scoreboard.index');
+
+    // Yahtzee
+    Route::get('yahtzee', [YahtzeeGameController::class, 'index'])->name('yahtzee.index');
+    Route::post('yahtzee', [YahtzeeGameController::class, 'store'])->name('yahtzee.store');
+    Route::get('yahtzee/{yahtzeeGame}', [YahtzeeGameController::class, 'show'])->name('yahtzee.show');
+    Route::post('yahtzee/{yahtzeeGame}/roll', [YahtzeeGameController::class, 'roll'])->name('yahtzee.roll');
+    Route::patch('yahtzee/{yahtzeeGame}/hold', [YahtzeeGameController::class, 'hold'])->name('yahtzee.hold');
+    Route::post('yahtzee/{yahtzeeGame}/score', [YahtzeeGameController::class, 'score'])->name('yahtzee.score');
+    Route::delete('yahtzee/{yahtzeeGame}', [YahtzeeGameController::class, 'destroy'])->name('yahtzee.destroy');
 
     // Contacts
     Route::get('contacts', [ContactController::class, 'index'])->name('contacts.index');

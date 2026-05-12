@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3';
-import { BookUser, CalendarDays, ClipboardList, CookingPot, LayoutGrid, ListChecks, Trophy, UtensilsCrossed, Users, Wallet } from 'lucide-vue-next';
+import { BookUser, CalendarDays, ClipboardList, CookingPot, Dices, LayoutGrid, ListChecks, Trophy, UtensilsCrossed, Users, Wallet } from 'lucide-vue-next';
 import { computed } from 'vue';
 import NavFooter from '@/components/NavFooter.vue';
 import NavMain from '@/components/NavMain.vue';
@@ -64,6 +64,11 @@ const allNavItems: NavItemWithPermission[] = [
         title: 'Contacts',
         href: '/contacts',
         icon: BookUser,
+    },
+    {
+        title: 'Yahtzee',
+        href: '/yahtzee',
+        icon: Dices,
     },
     {
         title: 'Budget',
