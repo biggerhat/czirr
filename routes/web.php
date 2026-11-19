@@ -22,6 +22,7 @@ use App\Http\Controllers\FamilyInviteController;
 use App\Http\Controllers\FamilyListController;
 use App\Http\Controllers\FamilyListItemController;
 use App\Http\Controllers\FamilyMemberController;
+use App\Http\Controllers\GridGameController;
 use App\Http\Controllers\IncomeController;
 use App\Http\Controllers\MealPlanController;
 use App\Http\Controllers\MyDayController;
@@ -183,6 +184,13 @@ Route::middleware(['auth', 'verified', 'family', 'throttle:family'])->group(func
     Route::delete('yahtzee/{yahtzeeGame}', [YahtzeeGameController::class, 'destroy'])->name('yahtzee.destroy');
 
     // Game night (generic scorekeeper + Farkle)
+    Route::get('games/duels', [GridGameController::class, 'index'])->middleware('permission:lists.view')->name('duels.index');
+    Route::post('games/duels', [GridGameController::class, 'store'])->middleware(['permission:lists.create', 'throttle:60,1'])->name('duels.store');
+    Route::get('games/duels/{gridGame}', [GridGameController::class, 'show'])->middleware('permission:lists.view')->name('duels.show');
+    Route::post('games/duels/{gridGame}/move', [GridGameController::class, 'move'])->middleware('permission:lists.create')->name('duels.move');
+    Route::delete('games/duels/{gridGame}', [GridGameController::class, 'destroy'])->middleware('permission:lists.delete')->name('duels.destroy');
+    Route::get('games/memory', fn () => \Inertia\Inertia::render('games/Memory'))->middleware('permission:lists.view')->name('games.memory');
+
     Route::get('games', [ScoreGameController::class, 'index'])->middleware('permission:lists.view')->name('games.index');
     Route::post('games', [ScoreGameController::class, 'store'])->middleware(['permission:lists.create', 'throttle:60,1'])->name('games.store');
     Route::get('games/{scoreGame}', [ScoreGameController::class, 'show'])->middleware('permission:lists.view')->name('games.show');

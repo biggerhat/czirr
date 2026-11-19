@@ -100,6 +100,19 @@ const standings = (g: Game) =>
                 </Button>
             </div>
 
+            <div class="flex flex-wrap gap-2 text-sm">
+                <Link
+                    href="/games/duels"
+                    class="rounded-md border px-3 py-1.5 hover:bg-muted"
+                    >Duels: Connect Four &amp; Tic-tac-toe</Link
+                >
+                <Link
+                    href="/games/memory"
+                    class="rounded-md border px-3 py-1.5 hover:bg-muted"
+                    >Memory match</Link
+                >
+            </div>
+
             <Card v-if="showNew">
                 <CardHeader>
                     <CardTitle class="text-base">Start a game</CardTitle>

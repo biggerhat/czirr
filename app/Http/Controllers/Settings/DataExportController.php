@@ -51,6 +51,7 @@ class DataExportController extends Controller
             'meal_plan' => MealPlanEntry::where('user_id', $id)->get(),
             'lists' => FamilyList::where('user_id', $id)->with('items')->get(),
             'contacts' => Contact::where('user_id', $id)->get(),
+            'grid_games' => \App\Models\GridGame::where('user_id', $id)->get(),
             'score_games' => \App\Models\ScoreGame::where('user_id', $id)->get(),
             'savings' => \App\Models\SavingsEntry::where('user_id', $id)->get(),
             'budget' => [
