@@ -215,6 +215,11 @@ class User extends Authenticatable
         return $this->hasMany(SavingsEntry::class);
     }
 
+    public function scoreGames(): HasMany
+    {
+        return $this->hasMany(ScoreGame::class);
+    }
+
     public function pantryItems(): HasMany
     {
         return $this->hasMany(PantryItem::class);

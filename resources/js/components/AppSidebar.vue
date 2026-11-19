@@ -6,6 +6,7 @@ import {
     ClipboardList,
     CookingPot,
     Dices,
+    Gamepad2,
     Gift,
     LayoutGrid,
     MessagesSquare,
@@ -125,6 +126,13 @@ const allNavItems: NavItemWithPermission[] = [
         title: 'Yahtzee',
         href: '/yahtzee',
         icon: Dices,
+        group: 'Chores & fun',
+    },
+    {
+        title: 'Game night',
+        href: '/games',
+        icon: Gamepad2,
+        permission: 'lists.view',
         group: 'Chores & fun',
     },
     {

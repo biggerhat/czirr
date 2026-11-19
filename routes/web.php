@@ -34,6 +34,7 @@ use App\Http\Controllers\RewardController;
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\SavingsController;
 use App\Http\Controllers\ScoreboardController;
+use App\Http\Controllers\ScoreGameController;
 use App\Http\Controllers\YahtzeeGameController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -180,6 +181,15 @@ Route::middleware(['auth', 'verified', 'family', 'throttle:family'])->group(func
     Route::patch('yahtzee/{yahtzeeGame}/hold', [YahtzeeGameController::class, 'hold'])->name('yahtzee.hold');
     Route::post('yahtzee/{yahtzeeGame}/score', [YahtzeeGameController::class, 'score'])->name('yahtzee.score');
     Route::delete('yahtzee/{yahtzeeGame}', [YahtzeeGameController::class, 'destroy'])->name('yahtzee.destroy');
+
+    // Game night (generic scorekeeper + Farkle)
+    Route::get('games', [ScoreGameController::class, 'index'])->middleware('permission:lists.view')->name('games.index');
+    Route::post('games', [ScoreGameController::class, 'store'])->middleware(['permission:lists.create', 'throttle:60,1'])->name('games.store');
+    Route::get('games/{scoreGame}', [ScoreGameController::class, 'show'])->middleware('permission:lists.view')->name('games.show');
+    Route::post('games/{scoreGame}/rounds', [ScoreGameController::class, 'addRound'])->middleware('permission:lists.create')->name('games.rounds.store');
+    Route::delete('games/{scoreGame}/rounds', [ScoreGameController::class, 'undoRound'])->middleware('permission:lists.create')->name('games.rounds.undo');
+    Route::post('games/{scoreGame}/finish', [ScoreGameController::class, 'finish'])->middleware('permission:lists.create')->name('games.finish');
+    Route::delete('games/{scoreGame}', [ScoreGameController::class, 'destroy'])->middleware('permission:lists.delete')->name('games.destroy');
 
     // Contacts
     Route::get('contacts', [ContactController::class, 'index'])->name('contacts.index');
