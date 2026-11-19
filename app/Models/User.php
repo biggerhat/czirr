@@ -3,18 +3,20 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Fortify\TwoFactorAuthenticatable;
+use NotificationChannels\WebPush\HasPushSubscriptions;
 use Spatie\Permission\Traits\HasRoles;
 
 class User extends Authenticatable
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasFactory, HasRoles, Notifiable, TwoFactorAuthenticatable;
+    use HasFactory, HasPushSubscriptions, HasRoles, Notifiable, TwoFactorAuthenticatable;
 
     /**
      * The attributes that are mass assignable.
@@ -25,6 +27,22 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
+        'timezone',
+        'notification_preferences',
+    ];
+
+    /**
+     * Default notification preferences.
+     *
+     * @var array<string, bool|int>
+     */
+    public const DEFAULT_NOTIFICATION_PREFERENCES = [
+        'digest_email' => true,
+        'digest_push' => true,
+        'alerts_push' => true,
+        'weekly_recap' => true,
+        'digest_hour' => 7,
+        'bills_due_days' => 3,
     ];
 
     /**
@@ -37,6 +55,7 @@ class User extends Authenticatable
         'two_factor_secret',
         'two_factor_recovery_codes',
         'remember_token',
+        'calendar_token',
     ];
 
     /**
@@ -50,7 +69,18 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'two_factor_confirmed_at' => 'datetime',
+            'notification_preferences' => 'array',
         ];
+    }
+
+    /**
+     * Get a notification preference, falling back to the default.
+     */
+    public function notificationPreference(string $key): mixed
+    {
+        return ($this->notification_preferences ?? [])[$key]
+            ?? self::DEFAULT_NOTIFICATION_PREFERENCES[$key]
+            ?? null;
     }
 
     public function events(): HasMany
@@ -98,6 +128,15 @@ class User extends Authenticatable
      * For family owners this returns their own ID; for linked members it
      * returns the ID of the user who owns the family.
      */
+    /**
+     * Current time in this user's own timezone (UTC when unset). Use this for
+     * "today" / "this week" so evenings don't roll over to tomorrow early.
+     */
+    public function localNow(): Carbon
+    {
+        return Carbon::now($this->timezone ?: 'UTC');
+    }
+
     public function familyOwnerId(): int
     {
         return $this->linkedFamilyMember()?->user_id ?? $this->id;
@@ -169,6 +208,16 @@ class User extends Authenticatable
     public function recipeTags(): HasMany
     {
         return $this->hasMany(RecipeTag::class);
+    }
+
+    public function savingsEntries(): HasMany
+    {
+        return $this->hasMany(SavingsEntry::class);
+    }
+
+    public function pantryItems(): HasMany
+    {
+        return $this->hasMany(PantryItem::class);
     }
 
     public function mealPlanEntries(): HasMany

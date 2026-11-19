@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use App\Models\Chore;
 use App\Models\ChoreCompletion;
 use App\Models\FamilyMember;
-use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -27,15 +26,35 @@ class ChoreController extends Controller
             ->orderBy('name')
             ->get();
 
-        $today = Carbon::today()->toDateString();
-        $todaysCompletions = ChoreCompletion::whereHas('assignment.chore', fn ($q) => $q->where('user_id', $ownerId))
+        $today = $request->user()->localNow()->toDateString();
+        // Include pending ones so a kid's tick stays ticked while it awaits approval.
+        $todaysCompletions = ChoreCompletion::withoutGlobalScope('approved')
+            ->whereHas('assignment.chore', fn ($q) => $q->where('user_id', $ownerId))
             ->where('completed_date', $today)
             ->get();
+
+        $pendingApprovals = $user->can('chores.edit')
+            ? ChoreCompletion::withoutGlobalScope('approved')
+                ->where('status', ChoreCompletion::PENDING)
+                ->whereHas('assignment.chore', fn ($q) => $q->where('user_id', $ownerId))
+                ->with(['assignment.chore:id,name', 'familyMember:id,name,nickname,color'])
+                ->orderBy('completed_date')
+                ->get()
+                ->map(fn (ChoreCompletion $c) => [
+                    'id' => $c->id,
+                    'chore' => $c->assignment->chore->name,
+                    'member' => $c->familyMember->display_name,
+                    'color' => $c->familyMember->color,
+                    'date' => $c->completed_date->toDateString(),
+                    'points' => $c->points_earned,
+                ])->values()
+            : [];
 
         return Inertia::render('chores/Index', [
             'chores' => $chores,
             'familyMembers' => $familyMembers,
             'todaysCompletions' => $todaysCompletions,
+            'pendingApprovals' => $pendingApprovals,
             'can' => [
                 'create' => $user->can('chores.create'),
                 'edit' => $user->can('chores.edit'),
@@ -52,6 +71,7 @@ class ChoreController extends Controller
             'description' => ['nullable', 'string'],
             'is_active' => ['boolean'],
             'points' => ['sometimes', 'integer', 'min:1', 'max:1000'],
+            'requires_approval' => ['sometimes', 'boolean'],
         ]);
 
         $owner = $request->user()->familyOwner();
@@ -71,6 +91,7 @@ class ChoreController extends Controller
             'description' => ['nullable', 'string'],
             'is_active' => ['boolean'],
             'points' => ['sometimes', 'integer', 'min:1', 'max:1000'],
+            'requires_approval' => ['sometimes', 'boolean'],
         ]);
 
         $chore->update($validated);

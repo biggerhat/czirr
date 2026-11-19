@@ -231,17 +231,17 @@ function streakFlameColor(streak: number): string {
         <div class="flex h-full flex-1 flex-col gap-4 p-4">
             <!-- Header -->
             <div class="flex items-center justify-between gap-2">
-                <h2
-                    class="flex items-center gap-2 text-lg font-semibold"
+                <h1
+                    class="flex items-center gap-2 text-xl font-semibold tracking-tight"
                 >
                     <Trophy class="h-5 w-5" />
                     Scoreboard
-                </h2>
+                </h1>
             </div>
 
             <!-- Week Navigation -->
             <div class="flex items-center justify-center gap-3">
-                <Button
+                <Button aria-label="Previous"
                     variant="outline"
                     size="icon"
                     class="h-8 w-8"
@@ -254,7 +254,7 @@ function streakFlameColor(streak: number): string {
                 >
                     {{ formatWeekLabel(weekStart) }}
                 </span>
-                <Button
+                <Button aria-label="Next"
                     variant="outline"
                     size="icon"
                     class="h-8 w-8"
@@ -358,7 +358,7 @@ function streakFlameColor(streak: number): string {
                                 No scores this week yet.
                             </p>
                             <p
-                                class="mt-1 text-xs text-muted-foreground/70"
+                                class="mt-1 text-xs text-muted-foreground"
                             >
                                 Complete chores to earn
                                 points!
@@ -369,13 +369,13 @@ function streakFlameColor(streak: number): string {
                                 v-for="(score, i) in scoreboard.weekly"
                                 :key="score.family_member_id"
                                 class="flex items-center gap-2 rounded-lg border px-2.5 py-2 transition-colors sm:gap-3 sm:px-3 sm:py-2.5"
-                                :class="i < 3 ? rankBgClasses[i] : 'border-transparent'"
+                                :class="i < 3 && score.weekly_total > 0 ? rankBgClasses[i] : 'border-transparent'"
                             >
                                 <div
                                     class="w-5 shrink-0 text-center sm:w-6"
                                 >
                                     <Medal
-                                        v-if="i < 3"
+                                        v-if="i < 3 && score.weekly_total > 0"
                                         class="mx-auto h-4 w-4 sm:h-5 sm:w-5"
                                         :class="medalColors[i]"
                                     />
@@ -469,13 +469,13 @@ function streakFlameColor(streak: number): string {
                                 v-for="(score, i) in scoreboard.overall"
                                 :key="score.family_member_id"
                                 class="flex items-center gap-2 rounded-lg border px-2.5 py-2 transition-colors sm:gap-3 sm:px-3 sm:py-2.5"
-                                :class="i < 3 ? rankBgClasses[i] : 'border-transparent'"
+                                :class="i < 3 && score.total > 0 ? rankBgClasses[i] : 'border-transparent'"
                             >
                                 <div
                                     class="w-5 shrink-0 text-center sm:w-6"
                                 >
                                     <Medal
-                                        v-if="i < 3"
+                                        v-if="i < 3 && score.total > 0"
                                         class="mx-auto h-4 w-4 sm:h-5 sm:w-5"
                                         :class="medalColors[i]"
                                     />
@@ -533,7 +533,7 @@ function streakFlameColor(streak: number): string {
                                 No streak data yet.
                             </p>
                             <p
-                                class="mt-1 text-xs text-muted-foreground/70"
+                                class="mt-1 text-xs text-muted-foreground"
                             >
                                 Complete all daily chores
                                 to build a streak!
@@ -775,7 +775,7 @@ function streakFlameColor(streak: number): string {
                             </p>
                             <p
                                 v-if="can.create"
-                                class="mt-1 text-xs text-muted-foreground/70"
+                                class="mt-1 text-xs text-muted-foreground"
                             >
                                 Add one for extra points!
                             </p>

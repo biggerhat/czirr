@@ -16,6 +16,7 @@ class Chore extends Model
         'description',
         'is_active',
         'points',
+        'requires_approval',
     ];
 
     protected function casts(): array
@@ -23,6 +24,7 @@ class Chore extends Model
         return [
             'is_active' => 'boolean',
             'points' => 'integer',
+            'requires_approval' => 'boolean',
         ];
     }
 

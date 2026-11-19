@@ -24,7 +24,11 @@ function loadHiddenEventTypes(): Set<number> {
 }
 
 export function useCalendar() {
-    const view = ref<CalendarView>('month');
+    // Month grids truncate titles to a few letters on phones; agenda reads well there.
+    const isPhone =
+        typeof window !== 'undefined' &&
+        window.matchMedia?.('(max-width: 639px)').matches;
+    const view = ref<CalendarView>(isPhone ? 'agenda' : 'month');
     const currentDate = ref(new Date());
     const events = ref<CalendarEvent[]>([]);
     const isLoading = ref(false);

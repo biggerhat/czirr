@@ -52,6 +52,7 @@ function getDotClass(member: FamilyMember): string {
         <PopoverTrigger as-child>
             <button
                 class="flex min-h-[2.25rem] w-full items-center justify-center gap-1 rounded-md px-1 py-1 transition-colors hover:bg-accent"
+                :aria-label="`Assign chore on ${day}`"
             >
                 <template v-if="assignments.length > 0">
                     <span
@@ -62,7 +63,7 @@ function getDotClass(member: FamilyMember): string {
                         :title="a.family_member.nickname || a.family_member.name"
                     />
                 </template>
-                <Plus v-else class="h-4 w-4 text-muted-foreground/50" />
+                <Plus v-else class="h-4 w-4 text-muted-foreground" />
             </button>
         </PopoverTrigger>
         <PopoverContent class="w-48 p-1" align="center">

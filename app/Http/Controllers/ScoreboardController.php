@@ -23,7 +23,7 @@ class ScoreboardController extends Controller
 
         $weekStart = $request->query('week')
             ? Carbon::parse($request->query('week'))->startOfWeek(Carbon::MONDAY)
-            : Carbon::now()->startOfWeek(Carbon::MONDAY);
+            : $user->localNow()->startOfWeek(Carbon::MONDAY);
 
         // Seed default streak bonuses if none exist
         if (! StreakBonus::where('user_id', $ownerId)->exists()) {

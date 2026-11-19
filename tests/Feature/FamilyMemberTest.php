@@ -139,3 +139,38 @@ test('child role cannot create family members', function () {
         ->postJson('/family', ['name' => 'Test', 'role' => 'child', 'color' => 'amber'])
         ->assertForbidden();
 });
+
+test('a parent cannot demote, unlink or remove the admin', function () {
+    $admin = createAdminUser();
+    $parent = User::factory()->create();
+    $parent->assignRole('parent');
+    FamilyMember::factory()->create(['user_id' => $admin->id, 'role' => 'parent', 'linked_user_id' => $parent->id]);
+    $adminMember = FamilyMember::where('linked_user_id', $admin->id)->first();
+    $payload = ['name' => 'Admin', 'role' => 'child', 'color' => 'blue', 'linked_user_id' => $admin->id];
+
+    $this->actingAs($parent)->putJson("/family/{$adminMember->id}", $payload)->assertForbidden();
+    $this->actingAs($parent)->putJson("/family/{$adminMember->id}", [...$payload, 'role' => 'parent', 'linked_user_id' => null])->assertForbidden();
+    $this->actingAs($parent)->deleteJson("/family/{$adminMember->id}")->assertForbidden();
+
+    expect($admin->fresh()->hasRole('admin'))->toBeTrue();
+});
+
+test('a parent can still make harmless edits to the admin member', function () {
+    $admin = createAdminUser();
+    $parent = User::factory()->create();
+    $parent->assignRole('parent');
+    FamilyMember::factory()->create(['user_id' => $admin->id, 'role' => 'parent', 'linked_user_id' => $parent->id]);
+    $adminMember = FamilyMember::where('linked_user_id', $admin->id)->first();
+
+    $this->actingAs($parent)->putJson("/family/{$adminMember->id}", [
+        'name' => 'Dad', 'role' => 'parent', 'color' => 'rose', 'linked_user_id' => $admin->id,
+    ])->assertOk();
+});
+
+test('the last admin cannot be demoted through role management', function () {
+    $admin = createAdminUser();
+    $adminMember = FamilyMember::where('linked_user_id', $admin->id)->first();
+
+    $this->actingAs($admin)->putJson("/family/{$adminMember->id}/role", ['role' => 'parent'])->assertStatus(422);
+    expect($admin->fresh()->hasRole('admin'))->toBeTrue();
+});

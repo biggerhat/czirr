@@ -2,10 +2,8 @@
 
 namespace App\Http\Controllers;
 
-use App\Enums\ListVisibility;
 use App\Models\FamilyList;
 use App\Models\FamilyListItem;
-use App\Models\FamilyMember;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -19,6 +17,7 @@ class FamilyListItemController extends Controller
             'name' => ['required', 'string', 'max:255'],
             'quantity' => ['nullable', 'string', 'max:100'],
             'notes' => ['nullable', 'string'],
+            'category' => ['nullable', 'string', 'max:50'],
         ]);
 
         $maxPosition = $familyList->items()->max('position') ?? -1;
@@ -27,6 +26,7 @@ class FamilyListItemController extends Controller
             'name' => $validated['name'],
             'quantity' => $validated['quantity'] ?? null,
             'notes' => $validated['notes'] ?? null,
+            'category' => $validated['category'] ?? null,
             'position' => $maxPosition + 1,
         ]);
 
@@ -41,6 +41,7 @@ class FamilyListItemController extends Controller
             'name' => ['required', 'string', 'max:255'],
             'quantity' => ['nullable', 'string', 'max:100'],
             'notes' => ['nullable', 'string'],
+            'category' => ['nullable', 'string', 'max:50'],
             'position' => ['nullable', 'integer', 'min:0'],
         ]);
 
@@ -80,41 +81,6 @@ class FamilyListItemController extends Controller
 
     private function authorizeListAccess(Request $request, FamilyList $familyList): void
     {
-        $user = $request->user();
-
-        if ($familyList->user_id === $user->id) {
-            return;
-        }
-
-        $linkedMember = FamilyMember::where('linked_user_id', $user->id)
-            ->where('user_id', $familyList->user_id)
-            ->first();
-
-        if (! $linkedMember) {
-            abort(403);
-        }
-
-        $visibility = $familyList->visibility;
-        $memberRole = $linkedMember->role?->value;
-
-        if ($visibility === ListVisibility::Everyone) {
-            return;
-        }
-
-        if ($visibility === ListVisibility::Parents && $memberRole === 'parent') {
-            return;
-        }
-
-        if ($visibility === ListVisibility::Children && $memberRole === 'child') {
-            return;
-        }
-
-        if ($visibility === ListVisibility::Specific) {
-            if ($familyList->members()->where('family_member_id', $linkedMember->id)->exists()) {
-                return;
-            }
-        }
-
-        abort(403);
+        abort_unless($familyList->isVisibleTo($request->user()), 403);
     }
 }

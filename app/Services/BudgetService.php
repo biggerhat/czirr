@@ -53,11 +53,11 @@ class BudgetService
         $bill->update($data);
         $bill->refresh();
 
-        if ($bill->is_active && $bill->event_id) {
-            $this->syncEventWithBill($bill);
-        } elseif ($bill->is_active && ! $bill->event_id) {
-            $this->createEventForBill($bill->user, $bill);
-        } elseif (! $bill->is_active && $bill->event_id) {
+        if ($bill->is_active) {
+            $bill->event_id
+                ? $this->syncEventWithBill($bill)
+                : $this->createEventForBill($bill->user, $bill);
+        } elseif ($bill->event_id) {
             $this->deleteBillEvent($bill);
         }
 
@@ -89,11 +89,11 @@ class BudgetService
         $income->update($data);
         $income->refresh();
 
-        if ($income->is_active && $income->event_id) {
-            $this->syncEventWithIncome($income);
-        } elseif ($income->is_active && ! $income->event_id) {
-            $this->createEventForIncome($income->user, $income);
-        } elseif (! $income->is_active && $income->event_id) {
+        if ($income->is_active) {
+            $income->event_id
+                ? $this->syncEventWithIncome($income)
+                : $this->createEventForIncome($income->user, $income);
+        } elseif ($income->event_id) {
             $this->deleteIncomeEvent($income);
         }
 

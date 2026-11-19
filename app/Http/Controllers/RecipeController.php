@@ -51,6 +51,7 @@ class RecipeController extends Controller
         return Inertia::render('recipes/Show', [
             'recipe' => $recipe,
             'cookbooks' => $availableCookbooks,
+            'rating' => RecipeRatingController::summary($recipe, $user->id),
             'can' => [
                 'edit' => $canEdit,
                 'delete' => $user->can('recipes.delete'),
@@ -83,6 +84,8 @@ class RecipeController extends Controller
 
     public function store(Request $request): JsonResponse
     {
+        $ownerId = $request->user()->familyOwnerId();
+
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
@@ -97,10 +100,10 @@ class RecipeController extends Controller
             'servings' => ['required', 'integer', 'min:1'],
             'image_url' => ['nullable', 'string', 'max:2048'],
             'source_url' => ['nullable', 'string', 'max:2048'],
-            'cuisine_id' => ['nullable', 'integer', 'exists:cuisines,id'],
+            'cuisine_id' => ['nullable', 'integer', Rule::exists('cuisines', 'id')->where(fn ($q) => $q->whereNull('user_id')->orWhere('user_id', $ownerId))],
             'difficulty' => ['required', 'string', Rule::in(array_column(\App\Enums\RecipeDifficulty::cases(), 'value'))],
             'tag_ids' => ['nullable', 'array'],
-            'tag_ids.*' => ['integer', 'exists:recipe_tags,id'],
+            'tag_ids.*' => ['integer', Rule::exists('recipe_tags', 'id')->where(fn ($q) => $q->whereNull('user_id')->orWhere('user_id', $ownerId))],
             'notes' => ['nullable', 'string'],
         ]);
 
@@ -122,6 +125,8 @@ class RecipeController extends Controller
             abort(403);
         }
 
+        $ownerId = $request->user()->familyOwnerId();
+
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
@@ -136,10 +141,10 @@ class RecipeController extends Controller
             'servings' => ['required', 'integer', 'min:1'],
             'image_url' => ['nullable', 'string', 'max:2048'],
             'source_url' => ['nullable', 'string', 'max:2048'],
-            'cuisine_id' => ['nullable', 'integer', 'exists:cuisines,id'],
+            'cuisine_id' => ['nullable', 'integer', Rule::exists('cuisines', 'id')->where(fn ($q) => $q->whereNull('user_id')->orWhere('user_id', $ownerId))],
             'difficulty' => ['required', 'string', Rule::in(array_column(\App\Enums\RecipeDifficulty::cases(), 'value'))],
             'tag_ids' => ['nullable', 'array'],
-            'tag_ids.*' => ['integer', 'exists:recipe_tags,id'],
+            'tag_ids.*' => ['integer', Rule::exists('recipe_tags', 'id')->where(fn ($q) => $q->whereNull('user_id')->orWhere('user_id', $ownerId))],
             'notes' => ['nullable', 'string'],
         ]);
 
@@ -190,11 +195,11 @@ class RecipeController extends Controller
 
     private function getAvailableCuisines(Request $request)
     {
-        return Cuisine::availableTo($request->user()->id)->orderBy('name')->get();
+        return Cuisine::availableTo($request->user()->familyOwnerId())->orderBy('name')->get();
     }
 
     private function getAvailableTags(Request $request)
     {
-        return RecipeTag::availableTo($request->user()->id)->orderBy('name')->get();
+        return RecipeTag::availableTo($request->user()->familyOwnerId())->orderBy('name')->get();
     }
 }

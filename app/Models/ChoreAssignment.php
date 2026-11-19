@@ -24,11 +24,13 @@ class ChoreAssignment extends Model
         ];
     }
 
+    /** @return BelongsTo<Chore, $this> */
     public function chore(): BelongsTo
     {
         return $this->belongsTo(Chore::class);
     }
 
+    /** @return BelongsTo<FamilyMember, $this> */
     public function familyMember(): BelongsTo
     {
         return $this->belongsTo(FamilyMember::class);

@@ -82,20 +82,20 @@ async function deleteGame() {
     <AppLayout :breadcrumbs="breadcrumbs">
         <div class="flex h-full flex-1 flex-col gap-4 p-4">
             <div class="flex items-center justify-between gap-2">
-                <h2 class="flex items-center gap-2 text-lg font-semibold">
+                <h1 class="flex items-center gap-2 text-xl font-semibold tracking-tight">
                     <Dices class="h-5 w-5" />
                     Yahtzee
-                </h2>
+                </h1>
             </div>
 
             <div class="rounded-lg border p-4">
-                <h3 class="mb-3 text-sm font-medium">Start a new game</h3>
+                <h2 class="mb-3 text-sm font-medium">Start a new game</h2>
                 <div v-if="opponents.length === 0" class="text-sm text-muted-foreground">
                     Invite a family member with their own login to play.
                 </div>
                 <div v-else class="flex flex-col gap-2 sm:flex-row sm:items-center">
                     <Select v-model="opponentId">
-                        <SelectTrigger class="w-full sm:w-64">
+                        <SelectTrigger class="w-full sm:w-64" aria-label="Opponent">
                             <SelectValue placeholder="Choose opponent" />
                         </SelectTrigger>
                         <SelectContent>
@@ -182,10 +182,10 @@ async function deleteGame() {
                                 Active
                             </span>
                         </Link>
-                        <Button
+                        <Button aria-label="Delete"
                             variant="ghost"
                             size="icon"
-                            class="h-8 w-8 text-destructive"
+                            class="h-8 w-8 text-muted-foreground hover:text-destructive"
                             @click="deletingId = game.id"
                         >
                             <Trash2 class="h-4 w-4" />

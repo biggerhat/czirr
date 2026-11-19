@@ -39,22 +39,24 @@ class FamilyListController extends Controller
             'members',
         ]);
 
-        $familyMembers = $this->getFamilyMembers($request);
-
+        // Closures are skipped on partial reloads, so the live-sync poll stays cheap.
         return Inertia::render('lists/Show', [
             'list' => $familyList,
-            'familyMembers' => $familyMembers,
+            'familyMembers' => fn () => $this->getFamilyMembers($request),
+            'suggestions' => fn () => $this->suggestions($familyList),
         ]);
     }
 
     public function store(Request $request): JsonResponse
     {
+        $ownerId = $request->user()->familyOwnerId();
+
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'type' => ['required', 'string', Rule::in(array_column(\App\Enums\ListType::cases(), 'value'))],
             'visibility' => ['required', 'string', Rule::in(array_column(ListVisibility::cases(), 'value'))],
             'member_ids' => ['nullable', 'array'],
-            'member_ids.*' => ['integer', 'exists:family_members,id'],
+            'member_ids.*' => ['integer', Rule::exists('family_members', 'id')->where('user_id', $ownerId)],
         ]);
 
         $owner = $request->user()->familyOwner();
@@ -79,12 +81,14 @@ class FamilyListController extends Controller
             abort(403);
         }
 
+        $ownerId = $request->user()->familyOwnerId();
+
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'type' => ['required', 'string', Rule::in(array_column(\App\Enums\ListType::cases(), 'value'))],
             'visibility' => ['required', 'string', Rule::in(array_column(ListVisibility::cases(), 'value'))],
             'member_ids' => ['nullable', 'array'],
-            'member_ids.*' => ['integer', 'exists:family_members,id'],
+            'member_ids.*' => ['integer', Rule::exists('family_members', 'id')->where('user_id', $ownerId)],
         ]);
 
         $familyList->update([
@@ -126,80 +130,40 @@ class FamilyListController extends Controller
 
     private function getVisibleLists(Request $request)
     {
-        $user = $request->user();
-
-        // Find if this user is a linked family member
-        $linkedMember = $user->linkedFamilyMember();
-
-        if (! $linkedMember) {
-            // User is a family owner — only see their own lists
-            return $user->familyLists();
-        }
-
-        // User is a linked family member — see own lists + family owner's visible lists
-        $familyOwnerId = $linkedMember->user_id;
-        $memberRole = $linkedMember->role?->value;
-        $memberId = $linkedMember->id;
-
-        return FamilyList::where(function ($query) use ($user, $familyOwnerId, $memberRole, $memberId) {
-            // Always include user's own lists
-            $query->where('user_id', $user->id)
-                // Include family owner's lists based on visibility
-                ->orWhere(function ($q) use ($familyOwnerId, $memberRole, $memberId) {
-                    $q->where('user_id', $familyOwnerId)
-                        ->where(function ($vis) use ($memberRole, $memberId) {
-                            $vis->where('visibility', ListVisibility::Everyone->value)
-                                ->when($memberRole === 'parent', fn ($q) => $q->orWhere('visibility', ListVisibility::Parents->value))
-                                ->when($memberRole === 'child', fn ($q) => $q->orWhere('visibility', ListVisibility::Children->value))
-                                ->orWhere(function ($specific) use ($memberId) {
-                                    $specific->where('visibility', ListVisibility::Specific->value)
-                                        ->whereHas('members', fn ($q) => $q->where('family_member_id', $memberId));
-                                });
-                        });
-                });
-        });
+        return FamilyList::visibleTo($request->user());
     }
 
     private function authorizeListAccess(Request $request, FamilyList $familyList): void
     {
-        $user = $request->user();
+        abort_unless($familyList->isVisibleTo($request->user()), 403);
+    }
 
-        // Owner always has access
-        if ($familyList->user_id === $user->id) {
-            return;
+    /**
+     * Frequently bought items for this family (checked off at least once,
+     * including ones since cleared) that aren't already on the list.
+     *
+     * @return list<string>
+     */
+    private function suggestions(FamilyList $list): array
+    {
+        if (! in_array($list->type, [\App\Enums\ListType::Grocery, \App\Enums\ListType::Shopping], true)) {
+            return [];
         }
 
-        // Check if user is a linked family member of the list owner's family
-        $linkedMember = FamilyMember::where('linked_user_id', $user->id)
-            ->where('user_id', $familyList->user_id)
-            ->first();
+        $onList = $list->items->pluck('name')->map(fn ($n) => mb_strtolower($n))->all();
 
-        if (! $linkedMember) {
-            abort(403);
-        }
-
-        $visibility = $familyList->visibility;
-        $memberRole = $linkedMember->role?->value;
-
-        if ($visibility === ListVisibility::Everyone) {
-            return;
-        }
-
-        if ($visibility === ListVisibility::Parents && $memberRole === 'parent') {
-            return;
-        }
-
-        if ($visibility === ListVisibility::Children && $memberRole === 'child') {
-            return;
-        }
-
-        if ($visibility === ListVisibility::Specific) {
-            if ($familyList->members()->where('family_member_id', $linkedMember->id)->exists()) {
-                return;
-            }
-        }
-
-        abort(403);
+        return \App\Models\FamilyListItem::withTrashed()
+            ->where('is_completed', true)
+            ->whereHas('familyList', fn ($q) => $q->where('user_id', $list->user_id)->where('type', $list->type))
+            ->selectRaw('MIN(name) as name, COUNT(*) as bought')
+            ->groupByRaw('LOWER(name)')
+            ->orderByDesc('bought')
+            ->limit(30)
+            ->pluck('name')
+            ->reject(fn ($n) => in_array(mb_strtolower($n), $onList, true))
+            ->take(12)
+            ->values()
+            ->all();
     }
 
     private function getFamilyMembers(Request $request)

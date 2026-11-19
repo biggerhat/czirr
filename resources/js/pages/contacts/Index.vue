@@ -102,7 +102,7 @@ function formatLocation(contact: Contact): string {
         <div class="flex h-full flex-1 flex-col gap-4 p-4">
             <!-- Header -->
             <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                <h2 class="text-lg font-semibold">Address Book</h2>
+                <h1 class="text-xl font-semibold tracking-tight">Address Book</h1>
                 <div class="flex items-center gap-2 w-full sm:w-auto">
                     <div class="relative flex-1 sm:flex-initial">
                         <Search class="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -125,12 +125,12 @@ function formatLocation(contact: Contact): string {
                 <template v-if="search">
                     <Search class="mx-auto mb-2 h-8 w-8 text-muted-foreground/30" />
                     <p class="text-sm text-muted-foreground">No contacts match "{{ search }}".</p>
-                    <p class="mt-1 text-xs text-muted-foreground/70">Try a different search term.</p>
+                    <p class="mt-1 text-xs text-muted-foreground">Try a different search term.</p>
                 </template>
                 <template v-else>
                     <Users class="mx-auto mb-2 h-8 w-8 text-muted-foreground/30" />
                     <p class="text-sm text-muted-foreground">No contacts yet.</p>
-                    <p class="mt-1 text-xs text-muted-foreground/70">Click "Add Contact" to get started.</p>
+                    <p class="mt-1 text-xs text-muted-foreground">Click "Add Contact" to get started.</p>
                 </template>
             </div>
 
@@ -144,10 +144,10 @@ function formatLocation(contact: Contact): string {
                     <div class="flex items-start justify-between gap-2">
                         <div class="font-medium">{{ formatName(contact) }}</div>
                         <div v-if="can.edit || can.delete" class="flex items-center gap-1 shrink-0">
-                            <Button v-if="can.edit" variant="outline" size="icon" class="h-8 w-8" @click="openEdit(contact)">
+                            <Button aria-label="Edit" v-if="can.edit" variant="ghost" size="icon" class="h-8 w-8" @click="openEdit(contact)">
                                 <Pencil class="h-3.5 w-3.5" />
                             </Button>
-                            <Button v-if="can.delete" variant="outline" size="icon" class="h-8 w-8 text-destructive" @click="openDelete(contact)">
+                            <Button aria-label="Delete" v-if="can.delete" variant="ghost" size="icon" class="h-8 w-8 text-muted-foreground hover:text-destructive" @click="openDelete(contact)">
                                 <Trash2 class="h-3.5 w-3.5" />
                             </Button>
                         </div>

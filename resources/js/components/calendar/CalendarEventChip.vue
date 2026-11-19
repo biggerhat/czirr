@@ -29,7 +29,7 @@ const isRecurring = computed(() => !!props.event.rrule || !!props.event.is_occur
         ]"
         @click.stop="$emit('click', event)"
     >
-        <span v-if="!event.is_all_day" :class="compact ? 'hidden sm:inline mr-1 opacity-75' : 'mr-1 opacity-75'">
+        <span v-if="!event.is_all_day" :class="compact ? 'hidden sm:inline mr-1 ' : 'mr-1 '">
             {{ formatEventTime(event.starts_at, timezone) }}
         </span>
         <Repeat v-if="isRecurring" :class="compact ? 'hidden sm:inline-block h-3 w-3 mr-0.5 align-text-bottom' : 'inline-block h-3 w-3 mr-0.5 align-text-bottom'" />

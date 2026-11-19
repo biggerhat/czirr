@@ -6,6 +6,7 @@ use App\Models\Bill;
 use App\Services\BudgetService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class BillController extends Controller
 {
@@ -15,10 +16,12 @@ class BillController extends Controller
 
     public function store(Request $request): JsonResponse
     {
+        $ownerId = $request->user()->familyOwnerId();
+
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'amount' => ['required', 'numeric', 'min:0'],
-            'budget_category_id' => ['required', 'exists:budget_categories,id'],
+            'budget_category_id' => ['required', Rule::exists('budget_categories', 'id')->where('user_id', $ownerId)],
             'start_date' => ['required', 'date'],
             'frequency' => ['required', 'string', 'in:once,weekly,biweekly,monthly,quarterly,yearly'],
             'is_active' => ['boolean'],
@@ -37,10 +40,12 @@ class BillController extends Controller
             abort(403);
         }
 
+        $ownerId = $request->user()->familyOwnerId();
+
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'amount' => ['required', 'numeric', 'min:0'],
-            'budget_category_id' => ['required', 'exists:budget_categories,id'],
+            'budget_category_id' => ['required', Rule::exists('budget_categories', 'id')->where('user_id', $ownerId)],
             'start_date' => ['required', 'date'],
             'frequency' => ['required', 'string', 'in:once,weekly,biweekly,monthly,quarterly,yearly'],
             'is_active' => ['boolean'],

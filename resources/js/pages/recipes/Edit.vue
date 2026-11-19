@@ -279,7 +279,7 @@ async function save() {
                     <Label>Cuisine</Label>
                     <div class="flex items-center gap-2">
                         <Select v-model="cuisineId">
-                            <SelectTrigger class="flex-1">
+                            <SelectTrigger class="flex-1" aria-label="Cuisine">
                                 <SelectValue placeholder="Select cuisine" />
                             </SelectTrigger>
                             <SelectContent>
@@ -331,26 +331,29 @@ async function save() {
                         <div class="flex-1 grid grid-cols-4 gap-1.5">
                             <Input
                                 v-model="ingredient.name"
+                                aria-label="Ingredient name"
                                 placeholder="Name"
                                 class="col-span-2 h-8 text-sm"
                                 required
                             />
                             <Input
                                 v-model="ingredient.quantity"
+                                aria-label="Quantity"
                                 placeholder="Qty"
                                 class="h-8 text-sm"
                             />
                             <Input
                                 v-model="ingredient.unit"
+                                aria-label="Unit"
                                 placeholder="Unit"
                                 class="h-8 text-sm"
                             />
                         </div>
-                        <Button
+                        <Button aria-label="Delete ingredient"
                             type="button"
                             variant="ghost"
                             size="icon"
-                            class="h-8 w-8 shrink-0 text-destructive"
+                            class="h-8 w-8 shrink-0 text-muted-foreground hover:text-destructive"
                             :disabled="ingredients.length <= 1"
                             @click="removeIngredient(index)"
                         >

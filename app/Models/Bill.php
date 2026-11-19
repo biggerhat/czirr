@@ -14,6 +14,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  */
 class Bill extends Model
 {
+    use \App\Models\Concerns\HasRecurrence;
     use HasFactory;
 
     protected $fillable = [
@@ -73,65 +74,7 @@ class Bill extends Model
 
     public function occurrencesInRange(Carbon $start, Carbon $end): int
     {
-        $billStart = $this->start_date;
-
-        if ($this->frequency === 'once') {
-            return $billStart->between($start, $end) ? 1 : 0;
-        }
-
-        // Weekly / biweekly
-        if (in_array($this->frequency, ['weekly', 'biweekly'])) {
-            $intervalDays = $this->frequency === 'weekly' ? 7 : 14;
-
-            if ($billStart->gt($end)) {
-                return 0;
-            }
-
-            // Find first occurrence on or after range start
-            $first = $billStart->copy();
-            if ($first->lt($start)) {
-                $daysDiff = $billStart->diffInDays($start);
-                $periods = (int) ceil($daysDiff / $intervalDays);
-                $first = $billStart->copy()->addDays($periods * $intervalDays);
-            }
-
-            if ($first->gt($end)) {
-                return 0;
-            }
-
-            return (int) floor($first->diffInDays($end) / $intervalDays) + 1;
-        }
-
-        // Monthly / quarterly / yearly
-        $dueDay = $billStart->day;
-
-        $interval = match ($this->frequency) {
-            'quarterly' => 3,
-            'yearly' => 12,
-            default => 1,
-        };
-
-        $count = 0;
-        $current = $start->copy()->startOfMonth();
-
-        while ($current->lte($end)) {
-            if ($current->gte($billStart->copy()->startOfMonth())) {
-                $monthsDiff = $billStart->copy()->startOfMonth()->diffInMonths($current);
-
-                if ($monthsDiff % $interval === 0) {
-                    $day = min($dueDay, $current->copy()->endOfMonth()->day);
-                    $dueDate = $current->copy()->day($day);
-
-                    if ($dueDate->between($start, $end)) {
-                        $count++;
-                    }
-                }
-            }
-
-            $current->addMonth();
-        }
-
-        return $count;
+        return $this->countOccurrences($this->start_date, $this->frequency, $start, $end);
     }
 
     public function isDueInRange(Carbon $start, Carbon $end): bool
@@ -141,43 +84,6 @@ class Bill extends Model
 
     public function nextDueDate(CarbonInterface $from): CarbonInterface
     {
-        $billStart = $this->start_date;
-
-        if ($this->frequency === 'once') {
-            return $billStart->gte($from) ? $billStart->copy() : Carbon::create(9999, 12, 31);
-        }
-
-        // Weekly / biweekly
-        if (in_array($this->frequency, ['weekly', 'biweekly'])) {
-            $intervalDays = $this->frequency === 'weekly' ? 7 : 14;
-            $next = $billStart->copy();
-
-            if ($next->gte($from)) {
-                return $next;
-            }
-
-            $daysDiff = $billStart->diffInDays($from);
-            $periods = (int) ceil($daysDiff / $intervalDays);
-            $next = $billStart->copy()->addDays($periods * $intervalDays);
-
-            return $next;
-        }
-
-        // Monthly / quarterly / yearly
-        $dueDay = min($this->start_date->day, $from->copy()->endOfMonth()->day);
-        $next = $from->copy()->day($dueDay);
-
-        if ($next->lt($from)) {
-            match ($this->frequency) {
-                'monthly' => $next->addMonth(),
-                'quarterly' => $next->addMonths(3),
-                'yearly' => $next->addYear(),
-                default => $next->addMonth(),
-            };
-            $dueDay = min($this->start_date->day, $next->copy()->endOfMonth()->day);
-            $next->day($dueDay);
-        }
-
-        return $next;
+        return $this->nextOccurrence($this->start_date, $this->frequency, $from);
     }
 }

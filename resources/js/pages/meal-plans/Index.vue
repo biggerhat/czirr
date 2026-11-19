@@ -1,7 +1,23 @@
 <script setup lang="ts">
 import { Link, router } from '@inertiajs/vue3';
-import { ChevronLeft, ChevronRight, Clock, CookingPot, ExternalLink, Pencil, Plus, Printer, ShoppingCart, Timer, Trash2, Users } from 'lucide-vue-next';
-import { ref, computed } from 'vue';
+import {
+    ChevronLeft,
+    ChevronRight,
+    Clock,
+    Copy,
+    CookingPot,
+    ExternalLink,
+    Lightbulb,
+    Pencil,
+    Plus,
+    Printer,
+    ShoppingCart,
+    Timer,
+    Trash2,
+    Users,
+} from 'lucide-vue-next';
+import { ref, computed, watch } from 'vue';
+import DinnerIdeasDialog from '@/components/meal-plans/DinnerIdeasDialog.vue';
 import MealPlanEntryModal from '@/components/meal-plans/MealPlanEntryModal.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -15,6 +31,7 @@ import {
 } from '@/components/ui/dialog';
 import { useSwipe } from '@/composables/useSwipe';
 import AppLayout from '@/layouts/AppLayout.vue';
+import { api } from '@/lib/api';
 import type { BreadcrumbItem } from '@/types';
 import type { CustomMeal, MealPlanEntry, MealType } from '@/types/meal-plans';
 import { MEAL_TYPE_LABELS, MEAL_TYPES } from '@/types/meal-plans';
@@ -35,9 +52,7 @@ const props = defineProps<{
     };
 }>();
 
-const breadcrumbs: BreadcrumbItem[] = [
-    { title: 'Meal Plans' },
-];
+const breadcrumbs: BreadcrumbItem[] = [{ title: 'Meal Plans' }];
 
 // Build the 14 days from startDate
 const days = computed(() => {
@@ -184,7 +199,11 @@ function openDetail(entry: MealPlanEntry) {
 
 function formatDetailDate(dateStr: string): string {
     const d = new Date(dateStr + 'T00:00:00');
-    return d.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+    return d.toLocaleDateString('en-US', {
+        weekday: 'long',
+        month: 'long',
+        day: 'numeric',
+    });
 }
 
 // Print
@@ -194,7 +213,38 @@ function printPlan() {
 
 function formatPrintDate(dateStr: string): string {
     const d = new Date(dateStr + 'T00:00:00');
-    return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+    return d.toLocaleDateString('en-US', {
+        weekday: 'short',
+        month: 'short',
+        day: 'numeric',
+    });
+}
+
+// Copy last week / dinner ideas
+const showIdeas = ref(false);
+const isCopying = ref(false);
+const copyMessage = ref<string | null>(null);
+
+async function copyPreviousWeek() {
+    isCopying.value = true;
+    copyMessage.value = null;
+    const res = await api<{ copied: number }>(
+        'POST',
+        '/meal-plans/copy-previous-week',
+        {
+            start: props.startDate,
+        },
+    );
+    isCopying.value = false;
+    if (res.ok) {
+        const n = res.data?.copied ?? 0;
+        copyMessage.value = n
+            ? `Copied ${n} meal${n === 1 ? '' : 's'} from the previous week.`
+            : 'Nothing new to copy from the previous week.';
+        router.reload({ only: ['entries'] });
+    } else {
+        copyMessage.value = 'Could not copy last week.';
+    }
 }
 
 // Grocery list generation
@@ -213,7 +263,9 @@ function groceryHeaders() {
     };
 }
 
-async function generateGroceryList(mode: 'create' | 'replace' | 'new' = 'create') {
+async function generateGroceryList(
+    mode: 'create' | 'replace' | 'new' = 'create',
+) {
     isGeneratingList.value = true;
     generateError.value = '';
     showGroceryConflict.value = false;
@@ -222,7 +274,11 @@ async function generateGroceryList(mode: 'create' | 'replace' | 'new' = 'create'
         const response = await fetch('/meal-plans/generate-grocery-list', {
             method: 'POST',
             headers: groceryHeaders(),
-            body: JSON.stringify({ start: props.startDate, end: props.endDate, mode }),
+            body: JSON.stringify({
+                start: props.startDate,
+                end: props.endDate,
+                mode,
+            }),
         });
 
         const data = await response.json();
@@ -234,7 +290,8 @@ async function generateGroceryList(mode: 'create' | 'replace' | 'new' = 'create'
         }
 
         if (!response.ok) {
-            generateError.value = data.message || 'Failed to generate grocery list.';
+            generateError.value =
+                data.message || 'Failed to generate grocery list.';
             return;
         }
 
@@ -260,7 +317,8 @@ function handleConflictViewExisting() {
 
 // Meal type colors for visual grouping
 const mealTypeColors: Record<MealType, string> = {
-    breakfast: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300',
+    breakfast:
+        'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300',
     lunch: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',
     dinner: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300',
     snack: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300',
@@ -274,7 +332,17 @@ const mealTypeBorderColors: Record<MealType, string> = {
 };
 
 // Mobile day view
+// Open on today when it falls inside the visible range.
 const selectedDayIndex = ref(0);
+watch(
+    days,
+    (list) => {
+        const todayStr = new Date().toLocaleDateString('en-CA');
+        const idx = list.indexOf(todayStr);
+        selectedDayIndex.value = idx >= 0 ? idx : 0;
+    },
+    { immediate: true },
+);
 
 const selectedDay = computed(() => days.value[selectedDayIndex.value]);
 
@@ -283,17 +351,25 @@ function prevDay() {
 }
 
 function nextDay() {
-    if (selectedDayIndex.value < days.value.length - 1) selectedDayIndex.value++;
+    if (selectedDayIndex.value < days.value.length - 1)
+        selectedDayIndex.value++;
 }
 
 function formatFullDay(dateStr: string): string {
     const d = new Date(dateStr + 'T00:00:00');
-    return d.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
+    return d.toLocaleDateString('en-US', {
+        weekday: 'long',
+        month: 'short',
+        day: 'numeric',
+    });
 }
 
 const DAY_ABBREVS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
-const { onTouchStart: swipeTouchStart, onTouchEnd: swipeTouchEnd } = useSwipe(nextDay, prevDay);
+const { onTouchStart: swipeTouchStart, onTouchEnd: swipeTouchEnd } = useSwipe(
+    nextDay,
+    prevDay,
+);
 </script>
 
 <template>
@@ -301,82 +377,183 @@ const { onTouchStart: swipeTouchStart, onTouchEnd: swipeTouchEnd } = useSwipe(ne
         <div class="flex h-full flex-1 flex-col gap-4 p-4" data-print-hide>
             <!-- Header -->
             <div class="flex items-center justify-between gap-2">
-                <h2 class="text-lg font-semibold shrink-0">Meal Plans</h2>
+                <h2 class="shrink-0 text-lg font-semibold">Meal Plans</h2>
                 <div class="flex items-center gap-2">
-                    <Button size="sm" variant="outline" @click="navigate('prev')">
+                    <Button aria-label="Previous"
+                        size="sm"
+                        variant="outline"
+                        @click="navigate('prev')"
+                    >
                         <ChevronLeft class="h-4 w-4" />
                     </Button>
-                    <Button size="sm" variant="outline" @click="navigate('today')">
+                    <Button
+                        size="sm"
+                        variant="outline"
+                        @click="navigate('today')"
+                    >
                         Today
                     </Button>
-                    <Button size="sm" variant="outline" @click="navigate('next')">
+                    <Button aria-label="Next"
+                        size="sm"
+                        variant="outline"
+                        @click="navigate('next')"
+                    >
                         <ChevronRight class="h-4 w-4" />
                     </Button>
-                    <Button v-if="entries.length > 0" size="sm" variant="outline" class="hidden sm:inline-flex" @click="printPlan">
-                        <Printer class="h-4 w-4 mr-1" />
+                    <Button
+                        v-if="entries.length > 0"
+                        size="sm"
+                        variant="outline"
+                        class="hidden sm:inline-flex"
+                        @click="printPlan"
+                    >
+                        <Printer class="mr-1 h-4 w-4" />
                         Print
                     </Button>
-                    <Button v-if="can.generateGroceryList" size="sm" variant="outline" class="hidden sm:inline-flex" :disabled="isGeneratingList" @click="generateGroceryList()">
-                        <ShoppingCart class="h-4 w-4 mr-1" />
-                        {{ isGeneratingList ? 'Generating...' : 'Grocery List' }}
+                    <Button
+                        v-if="can.generateGroceryList"
+                        size="sm"
+                        variant="outline"
+                        class="hidden sm:inline-flex"
+                        :disabled="isGeneratingList"
+                        @click="generateGroceryList()"
+                    >
+                        <ShoppingCart class="mr-1 h-4 w-4" />
+                        {{
+                            isGeneratingList ? 'Generating...' : 'Grocery List'
+                        }}
                     </Button>
-                    <span class="text-sm font-medium ml-2 hidden md:inline">{{ formatPeriodLabel() }}</span>
+                    <span class="ml-2 hidden text-sm font-medium md:inline">{{
+                        formatPeriodLabel()
+                    }}</span>
                 </div>
             </div>
 
             <!-- Mobile action row + period label -->
             <div class="flex items-center justify-between sm:hidden">
-                <span class="text-sm font-medium">{{ formatPeriodLabel() }}</span>
+                <span class="text-sm font-medium">{{
+                    formatPeriodLabel()
+                }}</span>
                 <div class="flex items-center gap-2">
-                    <Button v-if="entries.length > 0" size="sm" variant="outline" @click="printPlan">
+                    <Button
+                        v-if="entries.length > 0"
+                        size="sm"
+                        variant="outline"
+                        @click="printPlan"
+                    >
                         <Printer class="h-4 w-4" />
                     </Button>
-                    <Button v-if="can.generateGroceryList" size="sm" variant="outline" :disabled="isGeneratingList" @click="generateGroceryList()">
-                        <ShoppingCart class="h-4 w-4 mr-1" />
-                        {{ isGeneratingList ? 'Generating...' : 'Grocery List' }}
+                    <Button
+                        v-if="can.generateGroceryList"
+                        size="sm"
+                        variant="outline"
+                        :disabled="isGeneratingList"
+                        @click="generateGroceryList()"
+                    >
+                        <ShoppingCart class="mr-1 h-4 w-4" />
+                        {{
+                            isGeneratingList ? 'Generating...' : 'Grocery List'
+                        }}
                     </Button>
                 </div>
             </div>
 
+            <div v-if="can.create" class="flex flex-wrap items-center gap-2">
+                <Button
+                    size="sm"
+                    variant="outline"
+                    :disabled="isCopying"
+                    @click="copyPreviousWeek"
+                >
+                    <Copy class="mr-1 h-4 w-4" />
+                    {{ isCopying ? 'Copying...' : 'Copy last week' }}
+                </Button>
+                <Button size="sm" variant="outline" @click="showIdeas = true">
+                    <Lightbulb class="mr-1 h-4 w-4" />
+                    Dinner ideas
+                </Button>
+                <span
+                    v-if="copyMessage"
+                    class="text-sm text-muted-foreground"
+                    >{{ copyMessage }}</span
+                >
+            </div>
+            <DinnerIdeasDialog
+                v-model:open="showIdeas"
+                :default-date="startDate"
+            />
+
             <!-- Period label (tablet - between sm and md) -->
-            <div class="text-sm font-medium text-center hidden sm:block md:hidden">{{ formatPeriodLabel() }}</div>
+            <div
+                class="hidden text-center text-sm font-medium sm:block md:hidden"
+            >
+                {{ formatPeriodLabel() }}
+            </div>
 
             <!-- Grocery list error -->
-            <div v-if="generateError" class="flex items-center justify-between rounded-md border border-destructive/50 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+            <div
+                v-if="generateError"
+                class="flex items-center justify-between rounded-md border border-destructive/50 bg-destructive/10 px-3 py-2 text-sm text-destructive"
+            >
                 <span>{{ generateError }}</span>
-                <button class="ml-2 font-medium hover:underline" @click="generateError = ''">Dismiss</button>
+                <button
+                    class="ml-2 font-medium hover:underline"
+                    @click="generateError = ''"
+                >
+                    Dismiss
+                </button>
             </div>
 
             <!-- ===== MOBILE DAY VIEW ===== -->
-            <div class="md:hidden space-y-3" @touchstart="swipeTouchStart" @touchend="swipeTouchEnd">
+            <div
+                class="space-y-3 md:hidden"
+                @touchstart="swipeTouchStart"
+                @touchend="swipeTouchEnd"
+            >
                 <!-- Day strip -->
                 <div class="flex items-center gap-1">
-                    <button
-                        class="p-1 rounded hover:bg-accent shrink-0"
+                    <button aria-label="Previous"
+                        class="shrink-0 rounded p-1 hover:bg-accent"
                         :disabled="selectedDayIndex === 0"
                         :class="{ 'opacity-30': selectedDayIndex === 0 }"
                         @click="prevDay"
                     >
                         <ChevronLeft class="h-4 w-4" />
                     </button>
-                    <div class="flex-1 flex gap-0.5 overflow-x-auto">
+                    <div class="flex flex-1 gap-0.5 overflow-x-auto">
                         <button
                             v-for="(date, i) in days"
                             :key="date"
-                            class="flex flex-col items-center px-2 py-1 rounded-md text-xs min-w-[2.5rem] transition-colors"
+                            class="flex min-w-[2.5rem] flex-col items-center rounded-md px-2 py-1 text-xs transition-colors"
                             :class="[
-                                i === selectedDayIndex ? 'bg-primary text-primary-foreground' : date === today ? 'bg-primary/10' : 'hover:bg-muted',
+                                i === selectedDayIndex
+                                    ? 'bg-primary text-primary-foreground'
+                                    : date === today
+                                      ? 'bg-primary/10'
+                                      : 'hover:bg-muted',
                             ]"
                             @click="selectedDayIndex = i"
                         >
-                            <span class="font-medium">{{ DAY_ABBREVS[i % 7] }}</span>
-                            <span class="text-[10px]" :class="i === selectedDayIndex ? 'text-primary-foreground/80' : 'text-muted-foreground'">{{ formatDayNumber(date) }}</span>
+                            <span class="font-medium">{{
+                                DAY_ABBREVS[i % 7]
+                            }}</span>
+                            <span
+                                class="text-[10px]"
+                                :class="
+                                    i === selectedDayIndex
+                                        ? 'text-primary-foreground/80'
+                                        : 'text-muted-foreground'
+                                "
+                                >{{ formatDayNumber(date) }}</span
+                            >
                         </button>
                     </div>
-                    <button
-                        class="p-1 rounded hover:bg-accent shrink-0"
+                    <button aria-label="Next"
+                        class="shrink-0 rounded p-1 hover:bg-accent"
                         :disabled="selectedDayIndex === days.length - 1"
-                        :class="{ 'opacity-30': selectedDayIndex === days.length - 1 }"
+                        :class="{
+                            'opacity-30': selectedDayIndex === days.length - 1,
+                        }"
                         @click="nextDay"
                     >
                         <ChevronRight class="h-4 w-4" />
@@ -385,40 +562,74 @@ const { onTouchStart: swipeTouchStart, onTouchEnd: swipeTouchEnd } = useSwipe(ne
 
                 <!-- Current day header -->
                 <div class="text-center">
-                    <div class="text-sm font-semibold">{{ formatFullDay(selectedDay) }}</div>
-                    <div class="text-xs text-muted-foreground">Week {{ selectedDayIndex < 7 ? 1 : 2 }}</div>
+                    <div class="text-sm font-semibold">
+                        {{ formatFullDay(selectedDay) }}
+                    </div>
+                    <div class="text-xs text-muted-foreground">
+                        Week {{ selectedDayIndex < 7 ? 1 : 2 }}
+                    </div>
                 </div>
 
                 <!-- Meal type sections -->
-                <div v-for="mt in MEAL_TYPES" :key="mt" class="rounded-lg border overflow-hidden">
-                    <div class="px-3 py-2 text-sm font-medium border-b" :class="[mealTypeColors[mt], mealTypeBorderColors[mt]]">
+                <div
+                    v-for="mt in MEAL_TYPES"
+                    :key="mt"
+                    class="overflow-hidden rounded-lg border"
+                >
+                    <div
+                        class="border-b px-3 py-2 text-sm font-medium"
+                        :class="[mealTypeColors[mt], mealTypeBorderColors[mt]]"
+                    >
                         {{ MEAL_TYPE_LABELS[mt] }}
                     </div>
-                    <div class="p-2 space-y-1">
+                    <div class="space-y-1 p-2">
                         <button
                             v-for="entry in getEntries(selectedDay, mt)"
                             :key="entry.id"
                             type="button"
-                            class="w-full flex items-center gap-2 rounded-md px-3 py-2 text-sm text-left hover:bg-accent transition-colors"
+                            class="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm transition-colors hover:bg-accent"
                             @click="openDetail(entry)"
                         >
-                            <CookingPot v-if="entry.recipe_id" class="h-3.5 w-3.5 shrink-0 opacity-60" />
-                            <span class="flex-1 min-w-0 truncate">{{ entry.name }}</span>
-                            <span v-if="can.edit || can.delete" class="flex items-center gap-1 shrink-0">
-                                <button v-if="can.edit" class="p-1 rounded hover:bg-muted" @click.stop="openEditEntry(entry)">
-                                    <Pencil class="h-3.5 w-3.5 text-muted-foreground" />
+                            <CookingPot
+                                v-if="entry.recipe_id"
+                                class="h-3.5 w-3.5 shrink-0 opacity-60"
+                            />
+                            <span class="min-w-0 flex-1 truncate">{{
+                                entry.name
+                            }}</span>
+                            <span
+                                v-if="can.edit || can.delete"
+                                class="flex shrink-0 items-center gap-1"
+                            >
+                                <button
+                                    v-if="can.edit"
+                                    class="rounded p-1 hover:bg-muted"
+                                    @click.stop="openEditEntry(entry)"
+                                >
+                                    <Pencil
+                                        class="h-3.5 w-3.5 text-muted-foreground"
+                                    />
                                 </button>
-                                <button v-if="can.delete" class="p-1 rounded hover:bg-muted" @click.stop="openDelete(entry)">
-                                    <Trash2 class="h-3.5 w-3.5 text-destructive" />
+                                <button aria-label="Delete"
+                                    v-if="can.delete"
+                                    class="rounded p-1 hover:bg-muted"
+                                    @click.stop="openDelete(entry)"
+                                >
+                                    <Trash2
+                                        class="h-3.5 w-3.5 text-destructive"
+                                    />
                                 </button>
                             </span>
                         </button>
-                        <div v-if="getEntries(selectedDay, mt).length === 0" class="text-xs text-muted-foreground/50 text-center py-2">
+                        <div
+                            v-if="getEntries(selectedDay, mt).length === 0"
+                            class="py-2 text-center text-xs text-muted-foreground/50"
+                        >
                             No {{ MEAL_TYPE_LABELS[mt].toLowerCase() }}
                         </div>
                         <button
                             v-if="can.create"
-                            class="w-full flex items-center justify-center gap-1 rounded-md border border-dashed border-border text-muted-foreground hover:bg-accent transition-colors text-sm py-2"
+                            class="flex w-full items-center justify-center gap-1 rounded-md border border-dashed border-border py-2 text-sm text-muted-foreground transition-colors hover:bg-accent"
                             @click="openAddEntry(selectedDay, mt)"
                         >
                             <Plus class="h-3.5 w-3.5" />
@@ -429,23 +640,40 @@ const { onTouchStart: swipeTouchStart, onTouchEnd: swipeTouchEnd } = useSwipe(ne
             </div>
 
             <!-- ===== DESKTOP WEEK GRIDS ===== -->
-            <div v-for="(week, weekIndex) in [week1, week2]" :key="weekIndex" class="hidden md:block space-y-1">
-                <div class="text-xs font-medium text-muted-foreground px-1">
+            <div
+                v-for="(week, weekIndex) in [week1, week2]"
+                :key="weekIndex"
+                class="hidden space-y-1 md:block"
+            >
+                <div class="px-1 text-xs font-medium text-muted-foreground">
                     Week {{ weekIndex + 1 }}
                 </div>
 
                 <!-- Day headers -->
-                <div class="grid grid-cols-7 lg:grid-cols-[auto_repeat(7,minmax(0,1fr))] gap-1">
-                    <div class="hidden lg:flex min-w-[4.5rem]" />
+                <div
+                    class="grid grid-cols-7 gap-1 lg:grid-cols-[auto_repeat(7,minmax(0,1fr))]"
+                >
+                    <div class="hidden min-w-[4.5rem] lg:flex" />
                     <div
                         v-for="date in week"
                         :key="date"
-                        class="text-center rounded-t-md px-1 py-1.5"
-                        :class="date === today ? 'bg-primary/10' : 'bg-muted/50'"
+                        class="rounded-t-md px-1 py-1.5 text-center"
+                        :class="
+                            date === today ? 'bg-primary/10' : 'bg-muted/50'
+                        "
                     >
-                        <div class="text-xs text-muted-foreground">{{ formatDayHeader(date) }}</div>
-                        <div class="text-sm font-semibold" :class="date === today ? 'text-primary' : ''">
-                            <span v-if="formatDayNumber(date) === '1'" class="text-xs font-normal text-muted-foreground mr-0.5">{{ formatMonthLabel(date) }}</span>
+                        <div class="text-xs text-muted-foreground">
+                            {{ formatDayHeader(date) }}
+                        </div>
+                        <div
+                            class="text-sm font-semibold"
+                            :class="date === today ? 'text-primary' : ''"
+                        >
+                            <span
+                                v-if="formatDayNumber(date) === '1'"
+                                class="mr-0.5 text-xs font-normal text-muted-foreground"
+                                >{{ formatMonthLabel(date) }}</span
+                            >
                             {{ formatDayNumber(date) }}
                         </div>
                     </div>
@@ -453,16 +681,20 @@ const { onTouchStart: swipeTouchStart, onTouchEnd: swipeTouchEnd } = useSwipe(ne
 
                 <!-- Meal rows -->
                 <div v-for="mt in MEAL_TYPES" :key="mt">
-                    <div class="grid grid-cols-7 lg:grid-cols-[auto_repeat(7,minmax(0,1fr))] gap-1">
+                    <div
+                        class="grid grid-cols-7 gap-1 lg:grid-cols-[auto_repeat(7,minmax(0,1fr))]"
+                    >
                         <!-- Meal type label column -->
-                        <div class="hidden lg:flex items-center justify-end pr-1.5 text-xs text-muted-foreground whitespace-nowrap min-w-[4.5rem]">
+                        <div
+                            class="hidden min-w-[4.5rem] items-center justify-end pr-1.5 text-xs whitespace-nowrap text-muted-foreground lg:flex"
+                        >
                             {{ MEAL_TYPE_LABELS[mt] }}
                         </div>
 
                         <div
                             v-for="date in week"
                             :key="`${date}-${mt}`"
-                            class="min-h-[48px] rounded-md border border-border/50 p-1 group flex flex-col"
+                            class="group flex min-h-[48px] flex-col rounded-md border border-border/50 p-1"
                             :class="date === today ? 'bg-primary/5' : ''"
                         >
                             <!-- Entries -->
@@ -471,17 +703,35 @@ const { onTouchStart: swipeTouchStart, onTouchEnd: swipeTouchEnd } = useSwipe(ne
                                     v-for="entry in getEntries(date, mt)"
                                     :key="entry.id"
                                     type="button"
-                                    class="w-full flex items-start gap-0.5 rounded px-1 py-0.5 text-xs group/entry cursor-pointer text-left hover:opacity-80 transition-opacity"
+                                    class="group/entry flex w-full cursor-pointer items-start gap-0.5 rounded px-1 py-0.5 text-left text-xs transition-opacity hover:opacity-80"
                                     :class="mealTypeColors[mt]"
                                     @click="openDetail(entry)"
                                 >
-                                    <CookingPot v-if="entry.recipe_id" class="h-3 w-3 shrink-0 mt-0.5 opacity-60" />
-                                    <span class="flex-1 truncate leading-tight" :title="entry.name">{{ entry.name }}</span>
-                                    <span v-if="can.edit || can.delete" class="hidden group-hover/entry:flex items-center gap-0.5 shrink-0">
-                                        <button v-if="can.edit" class="hover:text-foreground" @click.stop="openEditEntry(entry)">
+                                    <CookingPot
+                                        v-if="entry.recipe_id"
+                                        class="mt-0.5 h-3 w-3 shrink-0 opacity-60"
+                                    />
+                                    <span
+                                        class="flex-1 truncate leading-tight"
+                                        :title="entry.name"
+                                        >{{ entry.name }}</span
+                                    >
+                                    <span
+                                        v-if="can.edit || can.delete"
+                                        class="hidden shrink-0 items-center gap-0.5 group-hover/entry:flex"
+                                    >
+                                        <button
+                                            v-if="can.edit"
+                                            class="hover:text-foreground"
+                                            @click.stop="openEditEntry(entry)"
+                                        >
                                             <Pencil class="h-2.5 w-2.5" />
                                         </button>
-                                        <button v-if="can.delete" class="hover:text-destructive" @click.stop="openDelete(entry)">
+                                        <button aria-label="Delete"
+                                            v-if="can.delete"
+                                            class="hover:text-destructive"
+                                            @click.stop="openDelete(entry)"
+                                        >
                                             <Trash2 class="h-2.5 w-2.5" />
                                         </button>
                                     </span>
@@ -489,9 +739,9 @@ const { onTouchStart: swipeTouchStart, onTouchEnd: swipeTouchEnd } = useSwipe(ne
                             </div>
 
                             <!-- Add button -->
-                            <button
+                            <button aria-label="Add add entry"
                                 v-if="can.create"
-                                class="w-full flex-1 mt-0.5 min-h-[20px] rounded border border-dashed border-transparent text-muted-foreground/0 group-hover:border-border group-hover:text-muted-foreground hover:!bg-accent transition-colors text-xs flex items-center justify-center"
+                                class="mt-0.5 flex min-h-[20px] w-full flex-1 items-center justify-center rounded border border-dashed border-transparent text-xs text-muted-foreground/0 transition-colors group-hover:border-border group-hover:text-muted-foreground hover:!bg-accent"
                                 @click="openAddEntry(date, mt)"
                             >
                                 <Plus class="h-3 w-3" />
@@ -502,10 +752,19 @@ const { onTouchStart: swipeTouchStart, onTouchEnd: swipeTouchEnd } = useSwipe(ne
             </div>
 
             <!-- Meal type legend (visible on md screens where the row labels are hidden, not mobile since mobile has its own view) -->
-            <div class="hidden md:flex lg:hidden flex-wrap items-center gap-2 text-xs">
-                <span class="text-muted-foreground font-medium">Meals:</span>
-                <span v-for="mt in MEAL_TYPES" :key="mt" class="flex items-center gap-1">
-                    <span class="h-2.5 w-2.5 rounded-sm" :class="mealTypeColors[mt]" />
+            <div
+                class="hidden flex-wrap items-center gap-2 text-xs md:flex lg:hidden"
+            >
+                <span class="font-medium text-muted-foreground">Meals:</span>
+                <span
+                    v-for="mt in MEAL_TYPES"
+                    :key="mt"
+                    class="flex items-center gap-1"
+                >
+                    <span
+                        class="h-2.5 w-2.5 rounded-sm"
+                        :class="mealTypeColors[mt]"
+                    />
                     {{ MEAL_TYPE_LABELS[mt] }}
                 </span>
             </div>
@@ -523,36 +782,68 @@ const { onTouchStart: swipeTouchStart, onTouchEnd: swipeTouchEnd } = useSwipe(ne
             />
 
             <!-- Detail dialog -->
-            <Dialog :open="showDetailDialog" @update:open="showDetailDialog = $event">
+            <Dialog
+                :open="showDetailDialog"
+                @update:open="showDetailDialog = $event"
+            >
                 <DialogContent class="sm:max-w-md">
                     <DialogHeader>
                         <DialogTitle>{{ detailEntry?.name }}</DialogTitle>
                         <DialogDescription>
-                            {{ MEAL_TYPE_LABELS[detailEntry?.meal_type ?? 'dinner'] }} · {{ detailEntry ? formatDetailDate(detailEntry.date) : '' }}
+                            {{
+                                MEAL_TYPE_LABELS[
+                                    detailEntry?.meal_type ?? 'dinner'
+                                ]
+                            }}
+                            ·
+                            {{
+                                detailEntry
+                                    ? formatDetailDate(detailEntry.date)
+                                    : ''
+                            }}
                         </DialogDescription>
                     </DialogHeader>
 
                     <div class="space-y-3 pt-1">
                         <!-- Custom meal description -->
-                        <p v-if="!detailEntry?.recipe_id && detailEntry?.description" class="text-sm text-muted-foreground whitespace-pre-wrap">
+                        <p
+                            v-if="
+                                !detailEntry?.recipe_id &&
+                                detailEntry?.description
+                            "
+                            class="text-sm whitespace-pre-wrap text-muted-foreground"
+                        >
                             {{ detailEntry.description }}
                         </p>
-                        <p v-if="!detailEntry?.recipe_id && !detailEntry?.description" class="text-sm text-muted-foreground italic">
+                        <p
+                            v-if="
+                                !detailEntry?.recipe_id &&
+                                !detailEntry?.description
+                            "
+                            class="text-sm text-muted-foreground italic"
+                        >
                             No description.
                         </p>
 
                         <!-- Linked recipe info -->
                         <template v-if="detailEntry?.recipe">
-                            <div class="flex items-center gap-1.5 text-xs text-muted-foreground">
+                            <div
+                                class="flex items-center gap-1.5 text-xs text-muted-foreground"
+                            >
                                 <CookingPot class="h-3.5 w-3.5" />
                                 Linked recipe
                             </div>
 
-                            <p v-if="detailEntry.recipe.description" class="text-sm text-muted-foreground">
+                            <p
+                                v-if="detailEntry.recipe.description"
+                                class="text-sm text-muted-foreground"
+                            >
                                 {{ detailEntry.recipe.description }}
                             </p>
 
-                            <div class="flex flex-wrap gap-3 text-sm text-muted-foreground">
+                            <div
+                                class="flex flex-wrap gap-3 text-sm text-muted-foreground"
+                            >
                                 <span class="flex items-center gap-1">
                                     <Timer class="h-3.5 w-3.5" />
                                     {{ detailEntry.recipe.prep_time }}m prep
@@ -563,18 +854,36 @@ const { onTouchStart: swipeTouchStart, onTouchEnd: swipeTouchEnd } = useSwipe(ne
                                 </span>
                                 <span class="flex items-center gap-1">
                                     <Users class="h-3.5 w-3.5" />
-                                    {{ detailEntry.recipe.servings }} {{ detailEntry.recipe.servings === 1 ? 'serving' : 'servings' }}
+                                    {{ detailEntry.recipe.servings }}
+                                    {{
+                                        detailEntry.recipe.servings === 1
+                                            ? 'serving'
+                                            : 'servings'
+                                    }}
                                 </span>
                             </div>
 
                             <Badge variant="secondary" class="text-xs">
-                                {{ DIFFICULTY_LABELS[detailEntry.recipe.difficulty] }}
+                                {{
+                                    DIFFICULTY_LABELS[
+                                        detailEntry.recipe.difficulty
+                                    ]
+                                }}
                             </Badge>
 
                             <!-- Entry-level notes -->
-                            <div v-if="detailEntry.description" class="border-t pt-3">
-                                <div class="text-xs font-medium text-muted-foreground mb-1">Notes</div>
-                                <p class="text-sm whitespace-pre-wrap">{{ detailEntry.description }}</p>
+                            <div
+                                v-if="detailEntry.description"
+                                class="border-t pt-3"
+                            >
+                                <div
+                                    class="mb-1 text-xs font-medium text-muted-foreground"
+                                >
+                                    Notes
+                                </div>
+                                <p class="text-sm whitespace-pre-wrap">
+                                    {{ detailEntry.description }}
+                                </p>
                             </div>
 
                             <Link
@@ -587,13 +896,33 @@ const { onTouchStart: swipeTouchStart, onTouchEnd: swipeTouchEnd } = useSwipe(ne
                         </template>
                     </div>
 
-                    <DialogFooter v-if="can.edit || can.delete" class="gap-2 pt-2">
-                        <Button v-if="can.edit" variant="outline" size="sm" @click="showDetailDialog = false; openEditEntry(detailEntry!)">
-                            <Pencil class="h-3.5 w-3.5 mr-1" />
+                    <DialogFooter
+                        v-if="can.edit || can.delete"
+                        class="gap-2 pt-2"
+                    >
+                        <Button
+                            v-if="can.edit"
+                            variant="outline"
+                            size="sm"
+                            @click="
+                                showDetailDialog = false;
+                                openEditEntry(detailEntry!);
+                            "
+                        >
+                            <Pencil class="mr-1 h-3.5 w-3.5" />
                             Edit
                         </Button>
-                        <Button v-if="can.delete" variant="outline" size="sm" class="text-destructive" @click="showDetailDialog = false; openDelete(detailEntry!)">
-                            <Trash2 class="h-3.5 w-3.5 mr-1" />
+                        <Button
+                            v-if="can.delete"
+                            variant="outline"
+                            size="sm"
+                            class="text-destructive"
+                            @click="
+                                showDetailDialog = false;
+                                openDelete(detailEntry!);
+                            "
+                        >
+                            <Trash2 class="mr-1 h-3.5 w-3.5" />
                             Remove
                         </Button>
                     </DialogFooter>
@@ -601,17 +930,29 @@ const { onTouchStart: swipeTouchStart, onTouchEnd: swipeTouchEnd } = useSwipe(ne
             </Dialog>
 
             <!-- Delete dialog -->
-            <Dialog :open="showDeleteDialog" @update:open="showDeleteDialog = $event">
+            <Dialog
+                :open="showDeleteDialog"
+                @update:open="showDeleteDialog = $event"
+            >
                 <DialogContent class="sm:max-w-md">
                     <DialogHeader>
                         <DialogTitle>Remove meal?</DialogTitle>
                         <DialogDescription>
-                            This will remove "{{ deletingEntry?.name }}" from the meal plan.
+                            This will remove "{{ deletingEntry?.name }}" from
+                            the meal plan.
                         </DialogDescription>
                     </DialogHeader>
                     <DialogFooter class="gap-2">
-                        <Button variant="outline" @click="showDeleteDialog = false">Cancel</Button>
-                        <Button variant="destructive" :disabled="isDeleting" @click="confirmDelete">
+                        <Button
+                            variant="outline"
+                            @click="showDeleteDialog = false"
+                            >Cancel</Button
+                        >
+                        <Button
+                            variant="destructive"
+                            :disabled="isDeleting"
+                            @click="confirmDelete"
+                        >
                             {{ isDeleting ? 'Removing...' : 'Remove' }}
                         </Button>
                     </DialogFooter>
@@ -619,17 +960,28 @@ const { onTouchStart: swipeTouchStart, onTouchEnd: swipeTouchEnd } = useSwipe(ne
             </Dialog>
 
             <!-- Grocery list conflict dialog -->
-            <Dialog :open="showGroceryConflict" @update:open="showGroceryConflict = $event">
+            <Dialog
+                :open="showGroceryConflict"
+                @update:open="showGroceryConflict = $event"
+            >
                 <DialogContent class="sm:max-w-md">
                     <DialogHeader>
                         <DialogTitle>Grocery list already exists</DialogTitle>
                         <DialogDescription>
-                            A grocery list for this period already exists. What would you like to do?
+                            A grocery list for this period already exists. What
+                            would you like to do?
                         </DialogDescription>
                     </DialogHeader>
                     <DialogFooter class="gap-2">
-                        <Button variant="outline" @click="showGroceryConflict = false">Cancel</Button>
-                        <Button variant="outline" @click="handleConflictViewExisting">
+                        <Button
+                            variant="outline"
+                            @click="showGroceryConflict = false"
+                            >Cancel</Button
+                        >
+                        <Button
+                            variant="outline"
+                            @click="handleConflictViewExisting"
+                        >
                             View Existing
                         </Button>
                         <Button @click="handleConflictReplace">
@@ -642,19 +994,28 @@ const { onTouchStart: swipeTouchStart, onTouchEnd: swipeTouchEnd } = useSwipe(ne
 
         <!-- ===== PRINT-ONLY CONTENT ===== -->
         <div class="print-only">
-            <h1 class="text-2xl font-bold text-center mb-1">Meal Plan</h1>
-            <p class="text-center text-sm text-gray-500 mb-6">{{ formatPeriodLabel() }}</p>
+            <h1 class="mb-1 text-center text-2xl font-bold">Meal Plan</h1>
+            <p class="mb-6 text-center text-sm text-gray-500">
+                {{ formatPeriodLabel() }}
+            </p>
 
-            <template v-for="(week, weekIndex) in [week1, week2]" :key="weekIndex">
-                <h2 class="text-sm font-bold mb-1">Week {{ weekIndex + 1 }}</h2>
-                <table class="w-full border-collapse border border-black text-xs mb-6">
+            <template
+                v-for="(week, weekIndex) in [week1, week2]"
+                :key="weekIndex"
+            >
+                <h2 class="mb-1 text-sm font-bold">Week {{ weekIndex + 1 }}</h2>
+                <table
+                    class="mb-6 w-full border-collapse border border-black text-xs"
+                >
                     <thead>
                         <tr>
-                            <th class="border border-black px-1 py-1 text-left font-bold bg-gray-100 w-[60px]"></th>
+                            <th
+                                class="w-[60px] border border-black bg-gray-100 px-1 py-1 text-left font-bold"
+                            ></th>
                             <th
                                 v-for="date in week"
                                 :key="date"
-                                class="border border-black px-1.5 py-1 text-center font-bold bg-gray-100"
+                                class="border border-black bg-gray-100 px-1.5 py-1 text-center font-bold"
                             >
                                 {{ formatPrintDate(date) }}
                             </th>
@@ -662,7 +1023,9 @@ const { onTouchStart: swipeTouchStart, onTouchEnd: swipeTouchEnd } = useSwipe(ne
                     </thead>
                     <tbody>
                         <tr v-for="mt in MEAL_TYPES" :key="mt">
-                            <td class="border border-black px-1.5 py-1 font-semibold bg-gray-50 align-top">
+                            <td
+                                class="border border-black bg-gray-50 px-1.5 py-1 align-top font-semibold"
+                            >
                                 {{ MEAL_TYPE_LABELS[mt] }}
                             </td>
                             <td
@@ -677,7 +1040,10 @@ const { onTouchStart: swipeTouchStart, onTouchEnd: swipeTouchEnd } = useSwipe(ne
                                 >
                                     {{ entry.name }}
                                 </div>
-                                <div v-if="getEntries(date, mt).length === 0" class="text-gray-300">
+                                <div
+                                    v-if="getEntries(date, mt).length === 0"
+                                    class="text-gray-300"
+                                >
                                     &mdash;
                                 </div>
                             </td>
@@ -685,7 +1051,6 @@ const { onTouchStart: swipeTouchStart, onTouchEnd: swipeTouchEnd } = useSwipe(ne
                     </tbody>
                 </table>
             </template>
-
         </div>
     </AppLayout>
 </template>

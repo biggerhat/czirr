@@ -372,7 +372,7 @@ const upperRemaining = computed(() => {
                                 <template v-else-if="cellKind(pid, cat) === 'preview-zero'">
                                     <button
                                         type="button"
-                                        class="inline-flex items-center rounded-md border border-muted-foreground/20 bg-muted/30 px-2.5 py-1 text-xs text-muted-foreground/70 transition-all hover:bg-muted hover:text-muted-foreground active:scale-95"
+                                        class="inline-flex items-center rounded-md border border-muted-foreground/20 bg-muted/30 px-2.5 py-1 text-xs text-muted-foreground transition-all hover:bg-muted hover:text-muted-foreground active:scale-95"
                                         @click="chooseCategory(cat)"
                                     >
                                         <span class="line-through decoration-1">0</span>
@@ -453,7 +453,7 @@ const upperRemaining = computed(() => {
                                 <template v-if="cellKind(pid, cat) === 'filled'">
                                     <span
                                         class="font-medium"
-                                        :class="cat === 'yahtzee' && cellNumber(pid, cat) === 50 ? 'text-amber-600 dark:text-amber-400' : ''"
+                                        :class="cat === 'yahtzee' && cellNumber(pid, cat) === 50 ? 'text-amber-700 dark:text-amber-400' : ''"
                                     >
                                         {{ cellNumber(pid, cat) }}
                                     </span>
@@ -472,7 +472,7 @@ const upperRemaining = computed(() => {
                                 <template v-else-if="cellKind(pid, cat) === 'preview-zero'">
                                     <button
                                         type="button"
-                                        class="inline-flex items-center rounded-md border border-muted-foreground/20 bg-muted/30 px-2.5 py-1 text-xs text-muted-foreground/70 transition-all hover:bg-muted hover:text-muted-foreground active:scale-95"
+                                        class="inline-flex items-center rounded-md border border-muted-foreground/20 bg-muted/30 px-2.5 py-1 text-xs text-muted-foreground transition-all hover:bg-muted hover:text-muted-foreground active:scale-95"
                                         @click="chooseCategory(cat)"
                                     >
                                         <span class="line-through decoration-1">0</span>
@@ -494,7 +494,7 @@ const upperRemaining = computed(() => {
                                 :class="[
                                     isActiveColumn(pid) ? pc(pid).tint : '',
                                     totals[pid].yahtzee_bonus > 0
-                                        ? 'font-semibold text-amber-600 dark:text-amber-400'
+                                        ? 'font-semibold text-amber-700 dark:text-amber-400'
                                         : 'text-muted-foreground/50',
                                 ]"
                             >
@@ -542,7 +542,7 @@ const upperRemaining = computed(() => {
                     Tap to score
                 </span>
                 <span class="inline-flex items-center gap-1.5">
-                    <span class="inline-flex items-center rounded-md border border-muted-foreground/20 bg-muted/30 px-2 py-0.5 text-xs text-muted-foreground/70">
+                    <span class="inline-flex items-center rounded-md border border-muted-foreground/20 bg-muted/30 px-2 py-0.5 text-xs text-muted-foreground">
                         <span class="line-through">0</span>
                     </span>
                     Scratch

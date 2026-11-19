@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { router } from '@inertiajs/vue3';
+import { Deferred, router } from '@inertiajs/vue3';
 import {
     CalendarRange,
     Check,
@@ -16,7 +16,10 @@ import {
 } from 'lucide-vue-next';
 import { ref, computed } from 'vue';
 import BillModal from '@/components/budgeting/BillModal.vue';
+import BudgetInsights from '@/components/budgeting/BudgetInsights.vue';
+import type { Insights } from '@/components/budgeting/BudgetInsights.vue';
 import ExpenseModal from '@/components/budgeting/ExpenseModal.vue';
+import ImportExpensesModal from '@/components/budgeting/ImportExpensesModal.vue';
 import IncomeModal from '@/components/budgeting/IncomeModal.vue';
 import { Button } from '@/components/ui/button';
 import {
@@ -42,6 +45,7 @@ const props = defineProps<{
     month: string;
     start_date: string;
     end_date: string;
+    insights?: Insights;
 }>();
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -133,6 +137,7 @@ const billsByCategory = computed(() => {
 const showBillModal = ref(false);
 const editingBill = ref<Bill | null>(null);
 const showExpenseModal = ref(false);
+const showImportModal = ref(false);
 const expensePrefill = ref<{ name: string; amount: number; budget_category_id: number; bill_id: number } | null>(null);
 const showIncomeModal = ref(false);
 const editingIncome = ref<Income | null>(null);
@@ -281,10 +286,10 @@ function getCategoryDotClass(category: BudgetCategory): string {
         <div class="flex h-full flex-1 flex-col gap-4 p-4">
             <!-- Header: nav + title + date range toggle -->
             <div class="flex items-center gap-2">
-                <Button variant="outline" size="icon" @click="navigateMonth(-1)">
+                <Button aria-label="Previous" variant="outline" size="icon" @click="navigateMonth(-1)">
                     <ChevronLeft class="h-4 w-4" />
                 </Button>
-                <Button variant="outline" size="icon" @click="navigateMonth(1)">
+                <Button aria-label="Next" variant="outline" size="icon" @click="navigateMonth(1)">
                     <ChevronRight class="h-4 w-4" />
                 </Button>
                 <Button variant="outline" size="sm" @click="goToday">
@@ -296,6 +301,7 @@ function getCategoryDotClass(category: BudgetCategory): string {
                     size="icon"
                     class="h-8 w-8"
                     :class="{ 'bg-accent': showDateRange }"
+                    aria-label="Custom date range"
                     @click="showDateRange = !showDateRange"
                 >
                     <CalendarRange class="h-4 w-4" />
@@ -322,7 +328,7 @@ function getCategoryDotClass(category: BudgetCategory): string {
             <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-px rounded-lg border bg-border overflow-hidden">
                 <div class="bg-card p-3">
                     <p class="text-xs font-medium text-muted-foreground">Income</p>
-                    <p class="text-lg font-bold text-emerald-600 dark:text-emerald-400">{{ formatCurrency(totalIncome) }}</p>
+                    <p class="text-lg font-bold text-emerald-700 dark:text-emerald-400">{{ formatCurrency(totalIncome) }}</p>
                 </div>
                 <div class="bg-card p-3">
                     <p class="text-xs font-medium text-muted-foreground">Bills</p>
@@ -330,7 +336,7 @@ function getCategoryDotClass(category: BudgetCategory): string {
                 </div>
                 <div class="bg-card p-3">
                     <p class="text-xs font-medium text-muted-foreground">Paid</p>
-                    <p class="text-lg font-bold text-emerald-600 dark:text-emerald-400">{{ formatCurrency(totalPaid) }}</p>
+                    <p class="text-lg font-bold text-emerald-700 dark:text-emerald-400">{{ formatCurrency(totalPaid) }}</p>
                 </div>
                 <div class="bg-card p-3">
                     <p class="text-xs font-medium text-muted-foreground">Unpaid</p>
@@ -342,11 +348,20 @@ function getCategoryDotClass(category: BudgetCategory): string {
                 </div>
                 <div class="bg-card p-3">
                     <p class="text-xs font-medium text-muted-foreground">Net</p>
-                    <p class="text-lg font-bold" :class="netBalance >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'">
+                    <p class="text-lg font-bold" :class="netBalance >= 0 ? 'text-emerald-700 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'">
                         {{ formatCurrency(netBalance) }}
                     </p>
                 </div>
             </div>
+
+            <!-- Trends (deferred so the page paints first) -->
+            <Deferred data="insights">
+                <template #fallback>
+                    <div class="h-40 animate-pulse rounded-lg border bg-muted/40" />
+                </template>
+                <BudgetInsights v-if="insights" :insights="insights" />
+            </Deferred>
+
 
             <!-- Income Section -->
             <div>
@@ -360,7 +375,7 @@ function getCategoryDotClass(category: BudgetCategory): string {
                 <div v-if="incomes.length === 0" class="rounded-lg border border-dashed p-8 text-center">
                     <DollarSign class="mx-auto mb-2 h-8 w-8 text-muted-foreground/30" />
                     <p class="text-sm text-muted-foreground">No income sources yet.</p>
-                    <p class="mt-1 text-xs text-muted-foreground/70">Click "Add Income" to get started.</p>
+                    <p class="mt-1 text-xs text-muted-foreground">Click "Add Income" to get started.</p>
                 </div>
                 <div v-else class="space-y-2">
                     <div
@@ -377,14 +392,14 @@ function getCategoryDotClass(category: BudgetCategory): string {
                                     <span class="capitalize"> &middot; {{ income.frequency }}</span>
                                 </span>
                             </div>
-                            <span class="font-semibold tabular-nums text-emerald-600 dark:text-emerald-400 sm:ml-auto">{{ formatCurrency(Number(income.amount)) }}</span>
+                            <span class="font-semibold tabular-nums text-emerald-700 dark:text-emerald-400 sm:ml-auto">{{ formatCurrency(Number(income.amount)) }}</span>
                         </div>
 
                         <div class="flex items-center gap-1">
-                            <Button variant="ghost" size="icon" class="h-8 w-8" @click="openEditIncome(income)">
+                            <Button aria-label="Edit income" variant="ghost" size="icon" class="h-8 w-8" @click="openEditIncome(income)">
                                 <Pencil class="h-3.5 w-3.5" />
                             </Button>
-                            <Button variant="ghost" size="icon" class="h-8 w-8 text-destructive" @click="openDeleteIncome(income)">
+                            <Button aria-label="Delete income" variant="ghost" size="icon" class="h-8 w-8 text-muted-foreground hover:text-destructive" @click="openDeleteIncome(income)">
                                 <Trash2 class="h-3.5 w-3.5" />
                             </Button>
                         </div>
@@ -403,13 +418,14 @@ function getCategoryDotClass(category: BudgetCategory): string {
                             class="h-8 w-8"
                             :class="{ 'bg-accent': groupByCategory }"
                             title="Group by category"
+                            aria-label="Group by category"
                             @click="groupByCategory = !groupByCategory"
                         >
                             <LayoutGrid v-if="groupByCategory" class="h-4 w-4" />
                             <List v-else class="h-4 w-4" />
                         </Button>
                         <Select v-model="billCategoryFilter">
-                            <SelectTrigger class="w-full sm:w-[200px]">
+                            <SelectTrigger class="w-full sm:w-[200px]" aria-label="Filter by category">
                                 <SelectValue placeholder="All Categories" />
                             </SelectTrigger>
                             <SelectContent>
@@ -431,12 +447,12 @@ function getCategoryDotClass(category: BudgetCategory): string {
                 <div v-if="bills.length === 0" class="rounded-lg border border-dashed p-8 text-center">
                     <Receipt class="mx-auto mb-2 h-8 w-8 text-muted-foreground/30" />
                     <p class="text-sm text-muted-foreground">No bills yet.</p>
-                    <p class="mt-1 text-xs text-muted-foreground/70">Click "Add Bill" to get started.</p>
+                    <p class="mt-1 text-xs text-muted-foreground">Click "Add Bill" to get started.</p>
                 </div>
                 <div v-else-if="filteredBills.length === 0" class="rounded-lg border border-dashed p-8 text-center">
                     <Receipt class="mx-auto mb-2 h-8 w-8 text-muted-foreground/30" />
                     <p class="text-sm text-muted-foreground">No bills in this category.</p>
-                    <p class="mt-1 text-xs text-muted-foreground/70">Try selecting a different category.</p>
+                    <p class="mt-1 text-xs text-muted-foreground">Try selecting a different category.</p>
                 </div>
 
                 <!-- Grouped view -->
@@ -478,10 +494,10 @@ function getCategoryDotClass(category: BudgetCategory): string {
                                 </div>
 
                                 <div class="flex items-center gap-1">
-                                    <Button variant="ghost" size="icon" class="h-8 w-8" @click.stop="openEditBill(bill)">
+                                    <Button aria-label="Edit bill" variant="ghost" size="icon" class="h-8 w-8" @click.stop="openEditBill(bill)">
                                         <Pencil class="h-3.5 w-3.5" />
                                     </Button>
-                                    <Button variant="ghost" size="icon" class="h-8 w-8 text-destructive" @click.stop="openDeleteBill(bill)">
+                                    <Button aria-label="Delete bill" variant="ghost" size="icon" class="h-8 w-8 text-muted-foreground hover:text-destructive" @click.stop="openDeleteBill(bill)">
                                         <Trash2 class="h-3.5 w-3.5" />
                                     </Button>
                                 </div>
@@ -527,10 +543,10 @@ function getCategoryDotClass(category: BudgetCategory): string {
                         </div>
 
                         <div class="flex items-center gap-1">
-                            <Button variant="ghost" size="icon" class="h-8 w-8" @click.stop="openEditBill(bill)">
+                            <Button aria-label="Edit bill" variant="ghost" size="icon" class="h-8 w-8" @click.stop="openEditBill(bill)">
                                 <Pencil class="h-3.5 w-3.5" />
                             </Button>
-                            <Button variant="ghost" size="icon" class="h-8 w-8 text-destructive" @click.stop="openDeleteBill(bill)">
+                            <Button aria-label="Delete bill" variant="ghost" size="icon" class="h-8 w-8 text-muted-foreground hover:text-destructive" @click.stop="openDeleteBill(bill)">
                                 <Trash2 class="h-3.5 w-3.5" />
                             </Button>
                         </div>
@@ -542,15 +558,20 @@ function getCategoryDotClass(category: BudgetCategory): string {
             <div>
                 <div class="flex items-center justify-between mb-3">
                     <h3 class="text-lg font-semibold">Expenses</h3>
-                    <Button size="sm" class="bg-blue-100 text-blue-700 border border-blue-300 hover:bg-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-700 dark:hover:bg-blue-900/50" @click="openCreateExpense">
-                        <Receipt class="h-4 w-4 mr-1" />
-                        Add Expense
-                    </Button>
+                    <div class="flex items-center gap-2">
+                        <Button size="sm" variant="outline" @click="showImportModal = true">
+                            Import CSV
+                        </Button>
+                        <Button size="sm" class="bg-blue-100 text-blue-700 border border-blue-300 hover:bg-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-700 dark:hover:bg-blue-900/50" @click="openCreateExpense">
+                            <Receipt class="h-4 w-4 mr-1" />
+                            Add Expense
+                        </Button>
+                    </div>
                 </div>
                 <div v-if="expenses.length === 0" class="rounded-lg border border-dashed p-8 text-center">
                     <Receipt class="mx-auto mb-2 h-8 w-8 text-muted-foreground/30" />
                     <p class="text-sm text-muted-foreground">No expenses this month.</p>
-                    <p class="mt-1 text-xs text-muted-foreground/70">Expenses and bill payments will appear here.</p>
+                    <p class="mt-1 text-xs text-muted-foreground">Expenses and bill payments will appear here.</p>
                 </div>
                 <div v-else class="space-y-2">
                     <div
@@ -574,7 +595,7 @@ function getCategoryDotClass(category: BudgetCategory): string {
                             <span class="font-semibold tabular-nums sm:ml-auto">{{ formatCurrency(Number(expense.amount)) }}</span>
                         </div>
 
-                        <Button variant="ghost" size="icon" class="h-8 w-8 text-destructive" @click="deleteExpense(expense)">
+                        <Button aria-label="Delete expense" variant="ghost" size="icon" class="h-8 w-8 text-muted-foreground hover:text-destructive" @click="deleteExpense(expense)">
                             <Trash2 class="h-3.5 w-3.5" />
                         </Button>
                     </div>
@@ -606,6 +627,12 @@ function getCategoryDotClass(category: BudgetCategory): string {
                 :categories="categories"
                 @update:open="showBillModal = $event"
                 @saved="onSaved"
+            />
+
+            <ImportExpensesModal
+                :open="showImportModal"
+                @update:open="showImportModal = $event"
+                @imported="onSaved"
             />
 
             <ExpenseModal

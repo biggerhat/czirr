@@ -2,9 +2,10 @@
 
 namespace App\Http\Controllers;
 
-use App\Enums\ListVisibility;
 use App\Models\Bill;
+use App\Models\BoardPost;
 use App\Models\ChoreAssignment;
+use App\Models\ChoreCompletion;
 use App\Models\Expense;
 use App\Models\FamilyList;
 use App\Models\MealPlanEntry;
@@ -18,7 +19,7 @@ class DashboardController extends Controller
 {
     public function index(Request $request): Response
     {
-        $today = Carbon::today();
+        $today = $request->user()->localNow()->startOfDay();
         $user = $request->user();
         $ownerId = $user->familyOwnerId();
         $linkedMember = $user->linkedFamilyMember();
@@ -64,13 +65,13 @@ class DashboardController extends Controller
         $todaysChores = collect();
         $scoreboardSummary = [];
         if ($can['viewChores']) {
-            $todaysChores = ChoreAssignment::where('day_of_week', Carbon::now()->dayOfWeek)
+            $todaysChores = ChoreAssignment::where('day_of_week', $today->dayOfWeek)
                 ->whereHas('chore', fn ($q) => $q->where('user_id', $ownerId)->where('is_active', true))
                 ->with(['chore', 'familyMember'])
                 ->get();
 
             $scoreService = app(ChoreScoreService::class);
-            $weeklyScores = $scoreService->getWeeklyScores($ownerId);
+            $weeklyScores = $scoreService->getWeeklyScores($ownerId, $user->localNow());
             $scoreboardSummary = $weeklyScores->take(3)->values()->all();
         }
 
@@ -78,29 +79,13 @@ class DashboardController extends Controller
         if ($can['viewMeals']) {
             $todaysMeals = MealPlanEntry::where('user_id', $ownerId)
                 ->whereDate('date', $today)
-                ->orderByRaw("FIELD(meal_type, 'breakfast', 'lunch', 'dinner', 'snack')")
+                ->orderByMealType()
                 ->get(['id', 'date', 'meal_type', 'name', 'recipe_id']);
         }
 
         $pinnedLists = collect();
         if ($can['viewLists']) {
-            $pinnedListsQuery = $linkedMember
-                ? FamilyList::where('is_pinned', true)->where(function ($query) use ($user, $linkedMember, $ownerId) {
-                    $query->where('user_id', $user->id)
-                        ->orWhere(function ($q) use ($linkedMember, $ownerId) {
-                            $q->where('user_id', $ownerId)
-                                ->where(function ($vis) use ($linkedMember) {
-                                    $vis->where('visibility', ListVisibility::Everyone->value)
-                                        ->when($linkedMember->role?->value === 'parent', fn ($q) => $q->orWhere('visibility', ListVisibility::Parents->value))
-                                        ->when($linkedMember->role?->value === 'child', fn ($q) => $q->orWhere('visibility', ListVisibility::Children->value))
-                                        ->orWhere(function ($specific) use ($linkedMember) {
-                                            $specific->where('visibility', ListVisibility::Specific->value)
-                                                ->whereHas('members', fn ($q) => $q->where('family_member_id', $linkedMember->id));
-                                        });
-                                });
-                        });
-                })
-                : $user->familyLists()->where('is_pinned', true);
+            $pinnedListsQuery = FamilyList::visibleTo($user)->where('is_pinned', true);
 
             $pinnedLists = $pinnedListsQuery
                 ->with(['items' => fn ($q) => $q->orderBy('is_completed')->orderBy('name')])
@@ -108,7 +93,45 @@ class DashboardController extends Controller
                 ->get();
         }
 
+        // Heads-up strip: things waiting on this person.
+        $pendingApprovals = 0;
+        if ($can['viewChores'] && $user->can('chores.edit')) {
+            $pendingApprovals = ChoreCompletion::withoutGlobalScope('approved')
+                ->where('status', ChoreCompletion::PENDING)
+                ->whereHas('assignment.chore', fn ($q) => $q->where('user_id', $ownerId))
+                ->count();
+        }
+
+        // The viewer's own savings balance (only if they have an account with activity).
+        $mySavings = null;
+        $member = $user->can('chores.view')
+            ? \App\Models\FamilyMember::where('user_id', $ownerId)->where('linked_user_id', $user->id)->first()
+            : null;
+        if ($member) {
+            $entries = \App\Models\SavingsEntry::where('user_id', $ownerId)->where('family_member_id', $member->id);
+            if ($entries->exists()) {
+                $mySavings = round((float) $entries->sum('amount'), 2);
+            }
+        }
+
+        $latestPost = null;
+        if ($can['viewLists']) {
+            $post = BoardPost::where('user_id', $ownerId)
+                ->with('author:id,name')
+                ->orderByDesc('is_pinned')
+                ->latest()
+                ->first();
+            $latestPost = $post ? [
+                'body' => \Illuminate\Support\Str::limit($post->body, 140),
+                'author' => $post->author?->name,
+                'pinned' => $post->is_pinned,
+            ] : null;
+        }
+
         return Inertia::render('Dashboard', [
+            'pendingApprovals' => $pendingApprovals,
+            'mySavings' => $mySavings,
+            'latestPost' => $latestPost,
             'todaysBills' => $todaysBills,
             'todaysChores' => $todaysChores,
             'todaysMeals' => $todaysMeals,

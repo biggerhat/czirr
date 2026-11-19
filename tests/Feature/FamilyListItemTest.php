@@ -65,7 +65,7 @@ test('admin can delete a list item', function () {
         ->deleteJson("/list-items/{$item->id}")
         ->assertNoContent();
 
-    $this->assertDatabaseMissing('family_list_items', ['id' => $item->id]);
+    $this->assertSoftDeleted('family_list_items', ['id' => $item->id]);
 });
 
 test('user cannot modify items on another user\'s list', function () {
@@ -86,4 +86,31 @@ test('adding an item requires name', function () {
         ->postJson("/lists/{$list->id}/items", [])
         ->assertUnprocessable()
         ->assertJsonValidationErrors('name');
+});
+
+test('items get an aisle guess and can be recategorized', function () {
+    $user = createAdminUser();
+    $list = FamilyList::factory()->create(['user_id' => $user->id, 'type' => 'grocery']);
+
+    $res = $this->actingAs($user)->postJson("/lists/{$list->id}/items", ['name' => 'Whole milk'])->assertCreated();
+    expect($res->json('category'))->toBe('Dairy & Eggs');
+
+    $res = $this->actingAs($user)->postJson("/lists/{$list->id}/items", ['name' => 'Widget'])->assertCreated();
+    expect($res->json('category'))->toBe('Other');
+
+    $id = $res->json('id');
+    $this->actingAs($user)->putJson("/list-items/{$id}", ['name' => 'Widget', 'category' => 'Produce'])->assertOk();
+    expect(FamilyListItem::find($id)->category)->toBe('Produce');
+});
+
+test('purchase history feeds suggestions even after checked items are cleared', function () {
+    $user = createAdminUser();
+    $old = FamilyList::factory()->create(['user_id' => $user->id, 'type' => 'grocery']);
+    FamilyListItem::factory()->create(['family_list_id' => $old->id, 'name' => 'Bananas', 'is_completed' => true]);
+    $this->actingAs($user)->deleteJson("/lists/{$old->id}/items/completed")->assertNoContent();
+
+    $new = FamilyList::factory()->create(['user_id' => $user->id, 'type' => 'grocery']);
+
+    $this->actingAs($user)->get("/lists/{$new->id}")
+        ->assertInertia(fn ($p) => $p->where('suggestions', ['Bananas']));
 });

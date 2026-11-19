@@ -18,10 +18,11 @@ import {
 } from '@/components/ui/dialog';
 import { useSwipe } from '@/composables/useSwipe';
 import AppLayout from '@/layouts/AppLayout.vue';
+import { api } from '@/lib/api';
 import { EVENT_COLORS } from '@/lib/calendar';
 import type { BreadcrumbItem } from '@/types';
 import type { FamilyMember } from '@/types/calendar';
-import type { Chore, ChoreCompletion, DayOfWeek } from '@/types/chores';
+import type { Chore, ChoreCompletion, DayOfWeek, PendingApproval } from '@/types/chores';
 import { DAY_LABELS } from '@/types/chores';
 
 type ChoreView = 'grid' | 'day';
@@ -40,6 +41,7 @@ const props = defineProps<{
     chores: Chore[];
     familyMembers: FamilyMember[];
     todaysCompletions: ChoreCompletion[];
+    pendingApprovals: PendingApproval[];
     can: {
         create: boolean;
         edit: boolean;
@@ -49,14 +51,18 @@ const props = defineProps<{
 }>();
 
 // Today's completion tracking
-const todayStr = new Date().toISOString().slice(0, 10);
+// Local calendar date (toISOString() is UTC, which is "tomorrow" in the evening in the Americas).
+const todayStr = new Date().toLocaleDateString('en-CA');
 const todayDow = new Date().getDay() as DayOfWeek;
 const completionIds = ref(new Set(props.todaysCompletions.map(c => c.chore_assignment_id)));
+const pendingIds = ref(
+    new Set(props.todaysCompletions.filter(c => c.status === 'pending').map(c => c.chore_assignment_id)),
+);
 const isTogglingCompletion = ref(false);
 
 type MemberProgress = {
     member: FamilyMember;
-    assignments: { assignment: { id: number; chore: Chore }; completed: boolean }[];
+    assignments: { assignment: { id: number; chore: Chore }; completed: boolean; pending: boolean }[];
     earned: number;
     possible: number;
 };
@@ -71,11 +77,12 @@ const todaysProgress = computed<MemberProgress[]>(() => {
                     .map(a => ({
                         assignment: { id: a.id, chore },
                         completed: completionIds.value.has(a.id),
+                        pending: pendingIds.value.has(a.id),
                     })),
             );
 
         const earned = memberAssignments
-            .filter(a => a.completed)
+            .filter(a => a.completed && !a.pending)
             .reduce((sum, a) => sum + a.assignment.chore.points, 0);
         const possible = memberAssignments.reduce((sum, a) => sum + a.assignment.chore.points, 0);
 
@@ -109,15 +116,31 @@ async function toggleCompletion(assignmentId: number) {
             const data = await response.json();
             if (data.completed) {
                 completionIds.value.add(assignmentId);
+                if (data.status === 'pending') pendingIds.value.add(assignmentId);
             } else {
                 completionIds.value.delete(assignmentId);
+                pendingIds.value.delete(assignmentId);
             }
             // Force reactivity
             completionIds.value = new Set(completionIds.value);
+            pendingIds.value = new Set(pendingIds.value);
+            router.reload({ only: ['pendingApprovals'] });
+        } else {
+            const err = await response.json().catch(() => null);
+            if (err?.message) window.alert(err.message);
         }
     } finally {
         isTogglingCompletion.value = false;
     }
+}
+
+const resolving = ref<number | null>(null);
+
+async function resolveApproval(item: PendingApproval, status: 'approved' | 'rejected') {
+    resolving.value = item.id;
+    const res = await api('PATCH', `/chore-completions/${item.id}`, { status });
+    resolving.value = null;
+    if (res.ok) router.reload({ only: ['pendingApprovals', 'todaysCompletions'] });
 }
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -390,6 +413,37 @@ function getUniqueMembers(chore: Chore): FamilyMember[] {
             </div>
 
             <!-- Today's Progress -->
+            <!-- Parent approval queue -->
+            <Card v-if="can.edit && pendingApprovals.length > 0" class="border-amber-500/50">
+                <CardHeader class="pb-2">
+                    <CardTitle class="flex items-center gap-2 text-base">
+                        <CheckCircle2 class="h-4 w-4 text-amber-500" />
+                        Waiting for approval ({{ pendingApprovals.length }})
+                    </CardTitle>
+                </CardHeader>
+                <CardContent class="space-y-2">
+                    <div
+                        v-for="item in pendingApprovals"
+                        :key="item.id"
+                        class="flex flex-wrap items-center gap-2 rounded-md border p-2 text-sm"
+                    >
+                        <span
+                            class="h-2.5 w-2.5 shrink-0 rounded-full"
+                            :class="EVENT_COLORS[item.color]?.dot ?? 'bg-gray-400'"
+                        />
+                        <span class="font-medium">{{ item.member }}</span>
+                        <span class="text-muted-foreground">did</span>
+                        <span class="font-medium">{{ item.chore }}</span>
+                        <Badge variant="secondary" class="text-xs">+{{ item.points }}</Badge>
+                        <span class="text-xs text-muted-foreground">{{ item.date }}</span>
+                        <div class="ml-auto flex gap-2">
+                            <Button size="sm" variant="outline" :disabled="resolving === item.id" @click="resolveApproval(item, 'rejected')">Not yet</Button>
+                            <Button size="sm" :disabled="resolving === item.id" @click="resolveApproval(item, 'approved')">Approve</Button>
+                        </div>
+                    </div>
+                </CardContent>
+            </Card>
+
             <Card v-if="todaysProgress.length > 0">
                 <CardHeader class="pb-3">
                     <CardTitle class="text-base flex items-center gap-2">
@@ -419,14 +473,15 @@ function getUniqueMembers(chore: Chore): FamilyMember[] {
                                 />
                             </div>
                             <div class="space-y-1 pl-5">
-                                <button
+                                <div
                                     v-for="item in mp.assignments"
                                     :key="item.assignment.id"
-                                    class="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors hover:bg-accent"
-                                    :disabled="isTogglingCompletion"
+                                    class="flex w-full items-center gap-2 rounded-md px-2 py-2.5 text-sm transition-colors hover:bg-accent cursor-pointer"
                                     @click="toggleCompletion(item.assignment.id)"
                                 >
                                     <Checkbox
+                                        class="size-5"
+                                        :aria-label="`Mark ${item.assignment.chore.name} ${item.completed ? 'not done' : 'done'}`"
                                         :model-value="item.completed"
                                         @click.stop
                                         @update:model-value="toggleCompletion(item.assignment.id)"
@@ -434,8 +489,9 @@ function getUniqueMembers(chore: Chore): FamilyMember[] {
                                     <span class="flex-1 text-left" :class="item.completed ? 'line-through text-muted-foreground' : 'font-medium'">
                                         {{ item.assignment.chore.name }}
                                     </span>
-                                    <Badge :variant="item.completed ? 'outline' : 'secondary'" class="text-xs">{{ item.assignment.chore.points }} pts</Badge>
-                                </button>
+                                    <Badge v-if="item.pending" variant="outline" class="text-xs text-amber-700 dark:text-amber-400">awaiting approval</Badge>
+                                    <Badge v-else :variant="item.completed ? 'outline' : 'secondary'" class="text-xs">{{ item.assignment.chore.points }} pts</Badge>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -446,7 +502,7 @@ function getUniqueMembers(chore: Chore): FamilyMember[] {
             <div v-if="chores.length === 0" class="rounded-lg border border-dashed p-8 text-center">
                 <ClipboardList class="mx-auto mb-2 h-8 w-8 text-muted-foreground/30" />
                 <p class="text-sm text-muted-foreground">No chores yet.</p>
-                <p class="mt-1 text-xs text-muted-foreground/70">Click "Add Chore" to get started.</p>
+                <p class="mt-1 text-xs text-muted-foreground">Click "Add Chore" to get started.</p>
             </div>
 
             <template v-else>
@@ -454,21 +510,21 @@ function getUniqueMembers(chore: Chore): FamilyMember[] {
                 <div v-if="mobileView === 'day'" class="md:hidden space-y-3" @touchstart="swipeTouchStart" @touchend="swipeTouchEnd">
                     <!-- Day strip -->
                     <div class="flex items-center gap-1">
-                        <button class="p-1 rounded hover:bg-accent shrink-0" @click="prevMobileDay">
+                        <button aria-label="Previous" class="p-2.5 rounded hover:bg-accent shrink-0" @click="prevMobileDay">
                             <ChevronLeft class="h-4 w-4" />
                         </button>
                         <div class="flex-1 flex gap-0.5">
                             <button
                                 v-for="day in days"
                                 :key="day"
-                                class="flex-1 flex flex-col items-center py-1 rounded-md text-xs transition-colors"
+                                class="flex-1 flex flex-col items-center py-2.5 rounded-md text-xs transition-colors"
                                 :class="day === selectedDayIndex ? 'bg-primary text-primary-foreground' : 'hover:bg-muted'"
                                 @click="selectedDayIndex = day"
                             >
                                 <span class="font-medium">{{ DAY_LABELS[day] }}</span>
                             </button>
                         </div>
-                        <button class="p-1 rounded hover:bg-accent shrink-0" @click="nextMobileDay">
+                        <button aria-label="Next" class="p-2.5 rounded hover:bg-accent shrink-0" @click="nextMobileDay">
                             <ChevronRight class="h-4 w-4" />
                         </button>
                     </div>
@@ -477,10 +533,16 @@ function getUniqueMembers(chore: Chore): FamilyMember[] {
                     <div class="text-center text-sm font-semibold">{{ DAY_LABELS_FULL[selectedDayIndex] }}</div>
 
                     <!-- Chore cards -->
-                    <div v-if="choresByDay[selectedDayIndex].length === 0" class="rounded-lg border border-dashed p-8 text-center">
+                    <p
+                        v-if="selectedDayIndex === todayDayOfWeek && todaysProgress.length > 0 && choresByDay[selectedDayIndex].length > 0"
+                        class="rounded-lg border border-dashed p-3 text-center text-sm text-muted-foreground"
+                    >
+                        Today's chores are in the checklist above — tick them off there.
+                    </p>
+                    <div v-else-if="choresByDay[selectedDayIndex].length === 0" class="rounded-lg border border-dashed p-4 text-center">
                         <CalendarDays class="mx-auto mb-2 h-8 w-8 text-muted-foreground/30" />
                         <p class="text-sm text-muted-foreground">No chores on {{ DAY_LABELS_FULL[selectedDayIndex] }}.</p>
-                        <p class="mt-1 text-xs text-muted-foreground/70">Assign chores from the grid view.</p>
+                        <p class="mt-1 text-xs text-muted-foreground">Assign chores from the grid view.</p>
                     </div>
                     <div v-else class="space-y-2">
                         <button
@@ -532,7 +594,7 @@ function getUniqueMembers(chore: Chore): FamilyMember[] {
                     <div v-if="activeChores.length === 0" class="rounded-lg border border-dashed p-8 text-center">
                         <ClipboardList class="mx-auto mb-2 h-8 w-8 text-muted-foreground/30" />
                         <p class="text-sm text-muted-foreground">No active chores.</p>
-                        <p class="mt-1 text-xs text-muted-foreground/70">Add a chore to start assigning tasks.</p>
+                        <p class="mt-1 text-xs text-muted-foreground">Add a chore to start assigning tasks.</p>
                     </div>
                     <button
                         v-for="chore in activeChores"
@@ -598,10 +660,10 @@ function getUniqueMembers(chore: Chore): FamilyMember[] {
                                             </div>
                                         </div>
                                         <template v-if="can.edit || can.delete">
-                                            <Button v-if="can.edit" variant="ghost" size="icon" class="h-8 w-8 shrink-0" @click="openEditChore(chore)">
+                                            <Button aria-label="Edit chore" v-if="can.edit" variant="ghost" size="icon" class="h-8 w-8 shrink-0" @click="openEditChore(chore)">
                                                 <Pencil class="h-3 w-3" />
                                             </Button>
-                                            <Button v-if="can.delete" variant="ghost" size="icon" class="h-8 w-8 shrink-0 text-destructive" @click="openDeleteChore(chore)">
+                                            <Button aria-label="Delete chore" v-if="can.delete" variant="ghost" size="icon" class="h-8 w-8 shrink-0 text-muted-foreground hover:text-destructive" @click="openDeleteChore(chore)">
                                                 <Trash2 class="h-3 w-3" />
                                             </Button>
                                         </template>

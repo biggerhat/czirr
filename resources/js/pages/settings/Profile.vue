@@ -93,7 +93,7 @@ const user = page.props.auth.user;
 
                         <div
                             v-if="status === 'verification-link-sent'"
-                            class="mt-2 text-sm font-medium text-green-600"
+                            class="mt-2 text-sm font-medium text-green-700 dark:text-green-400"
                         >
                             A new verification link has been sent to your email
                             address.
@@ -122,6 +122,17 @@ const user = page.props.auth.user;
                         </Transition>
                     </div>
                 </Form>
+            </div>
+
+            <div class="space-y-2 rounded-lg border p-4">
+                <Heading
+                    variant="small"
+                    title="Export your data"
+                    description="Download everything your family has stored (chores, recipes, events, budget, lists, contacts) as a JSON file."
+                />
+                <Button as-child variant="outline">
+                    <a href="/settings/export" download>Download export</a>
+                </Button>
             </div>
 
             <DeleteUser />
