@@ -1,0 +1,109 @@
+parameters:
+	ignoreErrors:
+		-
+			message: '#^Parameter \#1 \$contact of method App\\Http\\Controllers\\ContactController\:\:syncBirthdayEvent\(\) expects App\\Models\\Contact, Illuminate\\Database\\Eloquent\\Model given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Http/Controllers/ContactController.php
+
+		-
+			message: '#^Call to function in_array\(\) with arguments string, array\{App\\Enums\\ListType\:\:Grocery, App\\Enums\\ListType\:\:Shopping\} and true will always evaluate to false\.$#'
+			identifier: function.impossibleType
+			count: 1
+			path: app/Http/Controllers/FamilyListController.php
+
+		-
+			message: '#^Unreachable statement \- code above always terminates\.$#'
+			identifier: deadCode.unreachable
+			count: 1
+			path: app/Http/Controllers/FamilyListController.php
+
+		-
+			message: '#^Parameter \#2 \$familyList of method App\\Http\\Controllers\\FamilyListItemController\:\:authorizeListAccess\(\) expects App\\Models\\FamilyList, Illuminate\\Database\\Eloquent\\Model\|null given\.$#'
+			identifier: argument.type
+			count: 3
+			path: app/Http/Controllers/FamilyListItemController.php
+
+		-
+			message: '#^Using nullsafe property access on non\-nullable type App\\Enums\\FamilyRole\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 2
+			path: app/Http/Controllers/FamilyMemberController.php
+
+		-
+			message: '#^Comparison operation "\>" between int\<1, max\> and 0 is always true\.$#'
+			identifier: greater.alwaysTrue
+			count: 1
+			path: app/Http/Controllers/MealPlanController.php
+
+		-
+			message: '#^Offset ''held'' on array\{value\: int, held\: bool\} on left side of \?\? always exists and is not nullable\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Http/Controllers/YahtzeeGameController.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>value" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Http/Middleware/HandleInertiaRequests.php
+
+		-
+			message: '#^Offset string on array\{\}\|string on left side of \?\? does not exist\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Models/User.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>user_id" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Models/User.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,Illuminate\\Database\\Eloquent\\Model\>\:\:map\(\) expects callable\(Illuminate\\Database\\Eloquent\\Model, int\)\: App\\Models\\Bill, Closure\(App\\Models\\Bill\)\: App\\Models\\Bill given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Services/BudgetService.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,Illuminate\\Database\\Eloquent\\Model\>\:\:map\(\) expects callable\(Illuminate\\Database\\Eloquent\\Model, int\)\: App\\Models\\Income, Closure\(App\\Models\\Income\)\: App\\Models\\Income given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Services/BudgetService.php
+
+		-
+			message: '#^Parameter \#1 \$user of method App\\Services\\BudgetService\:\:createEventForBill\(\) expects App\\Models\\User, Illuminate\\Database\\Eloquent\\Model\|null given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Services/BudgetService.php
+
+		-
+			message: '#^Parameter \#1 \$user of method App\\Services\\BudgetService\:\:createEventForIncome\(\) expects App\\Models\\User, Illuminate\\Database\\Eloquent\\Model\|null given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Services/BudgetService.php
+
+		-
+			message: '#^Empty array passed to foreach\.$#'
+			identifier: foreach.emptyArray
+			count: 1
+			path: app/Services/CalendarFeedService.php
+
+		-
+			message: '#^Offset 2 on array\{non\-falsy\-string, non\-empty\-string, string, non\-empty\-string\} on left side of \?\? always exists and is not nullable\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: app/Services/RecipeImporter.php
+
+		-
+			message: '#^Parameter \#3 \$countConstraintFailures of method Recurr\\Transformer\\ArrayTransformer\:\:transform\(\) expects bool, int given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Services/RecurringEventService.php
+
+		-
+			message: '#^Parameter \#1 \$array \(list\<int\>\) of array_values is already a list, call has no effect\.$#'
+			identifier: arrayValues.list
+			count: 1
+			path: app/Services/YahtzeeScoreService.php

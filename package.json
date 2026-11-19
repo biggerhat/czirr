@@ -3,8 +3,8 @@
     "private": true,
     "type": "module",
     "scripts": {
-        "build": "vite build && cp public/build/sw.js public/sw.js 2>/dev/null; cp public/build/manifest.webmanifest public/manifest.webmanifest 2>/dev/null; true",
-        "build:ssr": "vite build && vite build --ssr && cp public/build/sw.js public/sw.js 2>/dev/null; cp public/build/manifest.webmanifest public/manifest.webmanifest 2>/dev/null; true",
+        "build": "NODE_OPTIONS=--max-old-space-size=4096 vite build && cp public/build/sw.js public/sw.js 2>/dev/null; cp public/build/manifest.webmanifest public/manifest.webmanifest 2>/dev/null; true",
+        "build:ssr": "NODE_OPTIONS=--max-old-space-size=4096 vite build && NODE_OPTIONS=--max-old-space-size=4096 vite build --ssr && cp public/build/sw.js public/sw.js 2>/dev/null; cp public/build/manifest.webmanifest public/manifest.webmanifest 2>/dev/null; true",
         "dev": "vite",
         "format": "prettier --write resources/",
         "format:check": "prettier --check resources/",

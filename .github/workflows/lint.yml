@@ -36,6 +36,9 @@ jobs:
       - name: Run Pint
         run: composer lint
 
+      - name: Static analysis (PHPStan)
+        run: composer analyse
+
       - name: Format Frontend
         run: npm run format
 

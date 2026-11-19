@@ -18,7 +18,8 @@ composer dev
 ./vendor/bin/pest --filter=test_name                       # single test
 
 # Linting
-composer lint              # PHP (Pint)
+composer lint              # PHP (Pint; `fully_qualified_strict_types` disabled in pint.json to avoid mass churn)
+composer analyse           # PHPStan level 5 (existing issues in phpstan-baseline.neon)
 npm run lint               # ESLint (JS/TS/Vue)
 npm run format             # Prettier
 
@@ -55,6 +56,61 @@ Uses Spatie Laravel Permission. Format: `resource.action` (e.g., `chores.create`
 
 The `family` middleware alias (`EnsureFamilyMember`) ensures the user belongs to a family before accessing protected routes.
 
+### Notifications & Scheduling
+
+- Scheduler (`routes/console.php`): `digest:send` and `recap:send` run **hourly** and send to users whose *local* hour matches (per-user `timezone` + `notification_preferences` JSON on `users`; read with `$user->notificationPreference($key)`, defaults in `User::DEFAULT_NOTIFICATION_PREFERENCES`).
+- Notifications live in `app/Notifications/` (`DailyDigest`, `WeeklyRecap`, `PushAlert`). Web push uses `laravel-notification-channels/webpush` (VAPID keys in `.env`; service worker handler in `public/push-sw.js`, loaded via Workbox `importScripts`).
+- Production needs: real `MAIL_*`, a queue worker, and the `schedule:run` cron. `Notification::fake()` ignores notifications whose `via()` is empty — give test users a push subscription.
+- Calendar feed: `users.calendar_token` → public `/calendar/feed/{token}.ics` (`CalendarFeedService`). Bill/income events are hidden from users without `budgeting.view`.
+
+### Visibility (lists, cookbooks)
+
+Use the `HasFamilyVisibility` trait (`Model::visibleTo($user)` scope, `$model->isVisibleTo($user)`) — don't hand-roll visibility queries.
+
+### Rewards & My Day
+
+Spendable balance = all-time chore + bonus points − pending/approved redemptions (`RewardService`); the scoreboard is unaffected. Rewards reuse `chores.view` (redeem) / `chores.edit` (manage + approve).
+
+### Recipe import
+
+`RecipeImporter` fetches user-supplied URLs — keep its SSRF guards (public IPs only, pinned resolve, manual redirects) intact.
+
+### Chores: approval & limits
+
+- `ChoreCompletion` has a global scope `approved` — **pending completions are invisible to every points/streak/digest query by default**. Use `withoutGlobalScope('approved')` only where pending ones must be seen (the approval queue, My Day, the toggle itself).
+- A chore with `requires_approval` makes kids' completions `pending`; users with `chores.edit` approve/reject via `PATCH chore-completions/{id}` and are auto-approved themselves.
+- Completions are bounded: no dates beyond today+1 and nothing older than 7 days; users without `chores.edit` can only complete their own assignments. Points are spendable (rewards), so keep these guards.
+
+### Family invites
+
+`FamilyInvite` tokens are stored **hashed** (`token_hash`); the plain token is only returned once at creation. Guests landing on `/invite/{token}` get `url.intended` set so Fortify returns them there after login/register. Keep `accepted_at`/`accepted_by` in `$fillable` — omitting them silently breaks single-use.
+
+`REGISTRATION_OPEN=false` makes sign-ups invite-only (`CreateNewUser::ensureRegistrationAllowed`); the first account is always allowed.
+
+### Family board
+
+`BoardPost`/`BoardController`: viewing and posting reuse `lists.view`/`lists.create`; **pinning and deleting others' posts needs `family.edit`** — kids hold `lists.edit`/`lists.delete`, so don't use those for moderation.
+
+### Budget insights & CSV import
+
+`BudgetInsightsService` builds the six-month trend and category breakdown from `BudgetService::getMonthlyOverview` (so numbers match the page) and is sent as a **deferred** Inertia prop (`<Deferred data="insights">`). `ExpenseCsvImporter` detects delimiter/headers; if the file has any negative amounts, negatives are spending and positives are skipped. Expenses must be created via `$owner->expenses()->create()` — `user_id` isn't fillable.
+
+### Pantry
+
+`PantryItem` staples are skipped by `MealPlanController::generateGroceryList`. Matching is **exact on `PantryItem::normalize()`** (case, plurals, parentheticals) and deliberately not fuzzy — a wrong skip means a missing ingredient at the store. Skipped names are flashed to the list page via `session('status')`.
+
+### Timezones
+
+The app timezone is UTC. For "today"/"this week" use `$user->localNow()`, never `Carbon::now()`/`today()` (the user's timezone is auto-detected from the browser on first load). Don't change the PHP default timezone per request — it would corrupt stored timestamps.
+
+### Cross-family safety
+
+Any `exists:` validation rule on a family-owned table must be scoped: `Rule::exists('table', 'id')->where('user_id', $ownerId)` (shared rows with `user_id IS NULL`, e.g. cuisines/tags/event types, use `whereNull('user_id')->orWhere(...)`). Admin members can only be modified by users with `roles.manage`. Owners can't delete their account while other members are linked.
+
+### Security headers & rate limiting
+
+`SecurityHeaders` middleware adds baseline headers (no CSP yet — needs browser testing). The authenticated route group uses the `family` rate limiter (300/min per user).
+
 ### Frontend Structure
 
 - Pages: `resources/js/pages/{Feature}/` — Inertia page components
@@ -72,11 +128,8 @@ Business logic for complex features lives in `app/Services/` (e.g., `ChoreScoreS
 
 **reka-ui Checkbox**: Uses `modelValue`, NOT `checked`. Using `:checked` silently fails — the prop falls through as an HTML attribute. Correct: `v-model="val"` or `:model-value="val"` + `@update:model-value="handler"`.
 
-**Pre-existing TS errors** (not introduced by us):
+**Pre-existing TS error** (not introduced by us):
 - `TwoFactorSetupModal.vue(271)`: Property 'code' does not exist on type 'string'
-- `AuthCardLayout.vue(11)` / `AuthSplitLayout.vue(4)`: Module '@/routes' has no exported member 'home'
-
-**Node.js version**: Node 19.9.0 is installed but Vite 7.3.1 requires 20.19+. Build may fail — this is pre-existing.
 
 ## Code Style
 
