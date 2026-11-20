@@ -36,6 +36,7 @@ export function useRealtime() {
     let timer: ReturnType<typeof setTimeout> | null = null;
     let channelName: string | null = null;
     let stop: (() => void) | null = null;
+    let unmounted = false;
 
     const refresh = () => {
         if (timer) clearTimeout(timer);
@@ -53,11 +54,12 @@ export function useRealtime() {
         }
     };
 
-    const connect = () => {
+    const connect = async () => {
         const familyId = (page.props.realtime as { familyId: number } | null)
             ?.familyId;
-        const echo = familyId ? getEcho() : null;
-        if (!echo || !familyId || channelName === `family.${familyId}`) return;
+        if (!familyId || channelName === `family.${familyId}`) return;
+        const echo = await getEcho();
+        if (!echo || unmounted) return;
 
         channelName = `family.${familyId}`;
         echo.private(channelName).listen('.data.changed', handler);
@@ -80,6 +82,7 @@ export function useRealtime() {
     watch(realtimeConnected, (up) => up && refresh());
 
     onBeforeUnmount(() => {
+        unmounted = true;
         document.removeEventListener('visibilitychange', catchUp);
         if (timer) clearTimeout(timer);
         stop?.();

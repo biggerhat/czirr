@@ -80,3 +80,13 @@ test('an event with a bogus timezone falls back to UTC instead of erroring', fun
         'start_time' => '10:00', 'end_time' => '11:00', 'timezone' => 'Nope/Zone',
     ])->assertCreated();
 });
+
+test('cookbooks cannot share with another family\'s members', function () {
+    $me = createAdminUser();
+    $them = foreignFamily();
+    $theirMember = $them->familyMembers()->first();
+    $payload = ['name' => 'Book', 'visibility' => 'specific'];
+
+    $this->actingAs($me)->postJson('/cookbooks', [...$payload, 'member_ids' => [$theirMember->id]])->assertUnprocessable();
+    $this->actingAs($me)->postJson('/cookbooks', [...$payload, 'member_ids' => [$me->familyMembers()->first()->id]])->assertCreated();
+});

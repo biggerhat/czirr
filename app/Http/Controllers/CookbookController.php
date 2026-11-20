@@ -68,7 +68,7 @@ class CookbookController extends Controller
             'description' => ['nullable', 'string'],
             'visibility' => ['required', 'string', Rule::in(array_column(ListVisibility::cases(), 'value'))],
             'member_ids' => ['nullable', 'array'],
-            'member_ids.*' => ['integer', 'exists:family_members,id'],
+            'member_ids.*' => ['integer', Rule::exists('family_members', 'id')->where('user_id', $request->user()->familyOwnerId())],
         ]);
 
         $owner = $request->user()->familyOwner();
@@ -98,7 +98,7 @@ class CookbookController extends Controller
             'description' => ['nullable', 'string'],
             'visibility' => ['required', 'string', Rule::in(array_column(ListVisibility::cases(), 'value'))],
             'member_ids' => ['nullable', 'array'],
-            'member_ids.*' => ['integer', 'exists:family_members,id'],
+            'member_ids.*' => ['integer', Rule::exists('family_members', 'id')->where('user_id', $request->user()->familyOwnerId())],
         ]);
 
         $cookbook->update([

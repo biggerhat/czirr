@@ -1,5 +1,5 @@
-import Echo from 'laravel-echo';
-import Pusher from 'pusher-js';
+import type Echo from 'laravel-echo';
+import type Pusher from 'pusher-js';
 import { ref } from 'vue';
 
 declare global {
@@ -14,16 +14,20 @@ let echo: Echo<'reverb'> | null = null;
 export const realtimeConnected = ref(false);
 
 /** Lazily creates the Reverb connection; null when realtime isn't configured. */
-export function getEcho(): Echo<'reverb'> | null {
+export async function getEcho(): Promise<Echo<'reverb'> | null> {
     const key = import.meta.env.VITE_REVERB_APP_KEY as string | undefined;
     if (!key) return null;
     if (echo) return echo;
 
-    window.Pusher = Pusher;
+    // Loaded on demand so installs without realtime never download the socket client.
+    const [{ default: EchoClient }, { default: PusherClient }] =
+        await Promise.all([import('laravel-echo'), import('pusher-js')]);
+    if (echo) return echo;
+    window.Pusher = PusherClient;
     const scheme = (import.meta.env.VITE_REVERB_SCHEME as string) || 'https';
     const port = Number(import.meta.env.VITE_REVERB_PORT) || 443;
 
-    echo = new Echo({
+    echo = new EchoClient({
         broadcaster: 'reverb',
         key,
         wsHost:
