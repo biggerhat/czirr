@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\FamilyMember;
+use App\Models\GridGame;
 use App\Models\ScoreGame;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -28,6 +29,11 @@ class ScoreGameController extends Controller
         foreach (ScoreGame::where('user_id', $owner->id)->where('status', 'completed')->whereNotNull('winner_names')->pluck('winner_names') as $names) {
             foreach (explode(' & ', $names) as $name) {
                 $wins[$name] = ($wins[$name] ?? 0) + 1;
+            }
+        }
+        foreach (GridGame::where('user_id', $owner->id)->where('status', 'won')->with('winner:id,name')->get() as $duel) {
+            if ($duel->winner) {
+                $wins[$duel->winner->name] = ($wins[$duel->winner->name] ?? 0) + 1;
             }
         }
         arsort($wins);

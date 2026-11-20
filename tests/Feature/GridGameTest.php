@@ -61,3 +61,15 @@ test('duels need a family opponent and outsiders are blocked', function () {
     $this->actingAs($stranger)->get("/games/duels/$id")->assertForbidden();
     $this->actingAs($stranger)->deleteJson("/games/duels/$id")->assertForbidden();
 });
+
+test('duel wins count toward the game night leaderboard', function () {
+    [$parent, $kid] = duelPair();
+    $id = $this->actingAs($parent)->postJson('/games/duels', ['kind' => 'tictactoe', 'opponent_id' => $kid->id])->json('id');
+    foreach ([[$parent, 0], [$kid, 3], [$parent, 1], [$kid, 4], [$parent, 2]] as [$who, $m]) {
+        $this->actingAs($who)->postJson("/games/duels/$id/move", ['move' => $m]);
+    }
+
+    $this->actingAs($parent)->get('/games')->assertInertia(
+        fn ($page) => $page->where('leaderboard.0.name', $parent->name)->where('leaderboard.0.wins', 1)
+    );
+});

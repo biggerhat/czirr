@@ -39,6 +39,12 @@ class GridGame extends Model
         return $this->belongsTo(User::class, 'player_two_id');
     }
 
+    /** @return BelongsTo<User, $this> */
+    public function winner(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'winner_id');
+    }
+
     public function involves(int $userId): bool
     {
         return $this->player_one_id === $userId || $this->player_two_id === $userId;
