@@ -32,6 +32,8 @@ class AppServiceProvider extends ServiceProvider
         $this->configureDefaults();
 
         Event::observe(EventObserver::class);
+        \App\Support\FamilyRealtime::register();
+        \Illuminate\Database\Eloquent\Model::preventLazyLoading(! app()->isProduction());
 
         // Generous per-user cap on the authenticated app (the list view polls every 5s).
         RateLimiter::for('family', fn (Request $request) => Limit::perMinute(300)

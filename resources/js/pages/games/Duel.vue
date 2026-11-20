@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Head, router } from '@inertiajs/vue3';
+import { Head, router, usePage } from '@inertiajs/vue3';
 import { Trash2 } from 'lucide-vue-next';
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import { Button } from '@/components/ui/button';
@@ -28,6 +28,7 @@ const breadcrumbs = computed<BreadcrumbItem[]>(() => [
     { title: props.game.kind === 'connect4' ? 'Connect Four' : 'Tic-tac-toe' },
 ]);
 
+const page = usePage();
 const error = ref<string | null>(null);
 const myTurn = computed(
     () =>
@@ -75,7 +76,12 @@ async function remove() {
 let timer: ReturnType<typeof setInterval> | null = null;
 onMounted(() => {
     timer = setInterval(() => {
-        if (!myTurn.value && props.game.status === 'active' && !document.hidden)
+        if (
+            !page.props.realtime &&
+            !myTurn.value &&
+            props.game.status === 'active' &&
+            !document.hidden
+        )
             router.reload({ only: ['game'] });
     }, 4000);
 });

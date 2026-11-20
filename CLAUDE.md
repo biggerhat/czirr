@@ -111,6 +111,10 @@ Any `exists:` validation rule on a family-owned table must be scoped: `Rule::exi
 
 `SecurityHeaders` middleware adds baseline headers (no CSP yet — needs browser testing). The authenticated route group uses the `family` rate limiter (300/min per user).
 
+### Realtime (Reverb websockets)
+
+Optional and off by default (`BROADCAST_CONNECTION=log`). When set to `reverb`, `App\Support\FamilyRealtime` pings `FamilyDataChanged` on the private `family.{ownerId}` channel whenever a family model in `FamilyRealtime::MODELS` is saved/deleted (add new models there). The ping carries **no data**: `useRealtime()` (mounted in `AppSidebarLayout`) answers it with an Inertia `router.reload()` of the current page, mapping resource → page prefixes in `useRealtime.ts`, so permissions/visibility are still enforced by the controllers. Pages that used polling (`lists/Show`, Yahtzee, duels) only poll when `page.props.realtime` is null. Needs `reverb:start`, a queue worker (events are queued) and the `REVERB_*`/`VITE_REVERB_*` env vars (see `.env.example`). Lazy loading is prevented outside production, so use eager loads / direct queries in observers.
+
 ### Frontend Structure
 
 - Pages: `resources/js/pages/{Feature}/` — Inertia page components

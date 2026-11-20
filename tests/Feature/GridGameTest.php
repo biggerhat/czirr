@@ -73,3 +73,20 @@ test('duel wins count toward the game night leaderboard', function () {
         fn ($page) => $page->where('leaderboard.0.name', $parent->name)->where('leaderboard.0.wins', 1)
     );
 });
+
+test('family changes are broadcast on the private family channel when realtime is on', function () {
+    \Illuminate\Support\Facades\Event::fake([\App\Events\FamilyDataChanged::class]);
+    config(['broadcasting.default' => 'reverb']);
+    [$parent, $kid] = duelPair();
+
+    $this->actingAs($parent)->postJson('/games/duels', ['kind' => 'tictactoe', 'opponent_id' => $kid->id])->assertCreated();
+
+    \Illuminate\Support\Facades\Event::assertDispatched(
+        \App\Events\FamilyDataChanged::class,
+        fn ($e) => $e->familyId === $parent->id && $e->resource === 'games'
+            && $e->broadcastOn()[0]->name === 'private-family.'.$parent->id
+    );
+
+    // Only members of that family may subscribe.
+    expect($kid->familyOwnerId())->toBe($parent->id);
+});

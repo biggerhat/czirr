@@ -1,6 +1,13 @@
 <script setup lang="ts">
-import { Link, router } from '@inertiajs/vue3';
-import { ChevronLeft, Circle, Dices, Pin, Sparkles, Trophy } from 'lucide-vue-next';
+import { Link, router, usePage } from '@inertiajs/vue3';
+import {
+    ChevronLeft,
+    Circle,
+    Dices,
+    Pin,
+    Sparkles,
+    Trophy,
+} from 'lucide-vue-next';
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import { Button } from '@/components/ui/button';
 import AppLayout from '@/layouts/AppLayout.vue';
@@ -33,7 +40,9 @@ const breadcrumbs: BreadcrumbItem[] = [
 ];
 
 const isMyTurn = computed(
-    () => props.game.status === 'active' && props.game.current_turn_user_id === props.currentUserId,
+    () =>
+        props.game.status === 'active' &&
+        props.game.current_turn_user_id === props.currentUserId,
 );
 
 const canRoll = computed(() => isMyTurn.value && props.game.rolls_left > 0);
@@ -150,7 +159,11 @@ let pollTimer: ReturnType<typeof setInterval> | null = null;
 
 onMounted(() => {
     pollTimer = setInterval(() => {
-        if (props.game.status === 'active' && !isMyTurn.value) {
+        if (
+            !usePage().props.realtime &&
+            props.game.status === 'active' &&
+            !isMyTurn.value
+        ) {
             reload();
         }
     }, 2500);
@@ -160,13 +173,19 @@ onBeforeUnmount(() => {
     if (pollTimer) clearInterval(pollTimer);
 });
 
-type CellKind = 'filled' | 'preview-positive' | 'preview-zero' | 'empty-mine' | 'empty-opponent';
+type CellKind =
+    | 'filled'
+    | 'preview-positive'
+    | 'preview-zero'
+    | 'empty-mine'
+    | 'empty-opponent';
 
 function cellKind(playerId: number, cat: YahtzeeCategory): CellKind {
     const v = props.game.scorecards[playerId]?.[cat];
     if (v !== null && v !== undefined) return 'filled';
     if (playerId !== props.currentUserId) return 'empty-opponent';
-    if (!canScore.value || props.preview[cat] === undefined) return 'empty-mine';
+    if (!canScore.value || props.preview[cat] === undefined)
+        return 'empty-mine';
     return props.preview[cat] === 0 ? 'preview-zero' : 'preview-positive';
 }
 
@@ -191,7 +210,10 @@ const bestCategory = computed<YahtzeeCategory | null>(() => {
 });
 
 function isActiveColumn(playerId: number): boolean {
-    return props.game.status === 'active' && props.game.current_turn_user_id === playerId;
+    return (
+        props.game.status === 'active' &&
+        props.game.current_turn_user_id === playerId
+    );
 }
 
 const upperRemaining = computed(() => {
@@ -204,7 +226,10 @@ const upperRemaining = computed(() => {
     <AppLayout :breadcrumbs="breadcrumbs">
         <div class="flex h-full flex-1 flex-col gap-4 p-4">
             <div class="flex items-center justify-between gap-2">
-                <Link href="/yahtzee" class="flex items-center gap-1 text-sm text-muted-foreground hover:underline">
+                <Link
+                    href="/yahtzee"
+                    class="flex items-center gap-1 text-sm text-muted-foreground hover:underline"
+                >
                     <ChevronLeft class="h-4 w-4" />
                     Back to games
                 </Link>
@@ -221,7 +246,9 @@ const upperRemaining = computed(() => {
                 <Trophy class="mx-auto mb-2 h-7 w-7 text-amber-500" />
                 <div class="text-lg font-semibold">
                     <template v-if="game.winner">
-                        <span :class="pc(game.winner.id).text">{{ game.winner.name }}</span>
+                        <span :class="pc(game.winner.id).text">{{
+                            game.winner.name
+                        }}</span>
                         <span> wins!</span>
                     </template>
                     <template v-else>It's a tie!</template>
@@ -231,24 +258,35 @@ const upperRemaining = computed(() => {
             <div
                 v-else
                 class="flex items-center justify-center gap-3 rounded-lg border-2 px-4 py-2 text-sm transition-colors"
-                :class="isMyTurn
-                    ? [myColor.softBorder, myColor.tint]
-                    : 'border-transparent bg-muted/30'"
+                :class="
+                    isMyTurn
+                        ? [myColor.softBorder, myColor.tint]
+                        : 'border-transparent bg-muted/30'
+                "
             >
                 <span
                     class="inline-block h-2 w-2 rounded-full"
-                    :class="isMyTurn
-                        ? [myColor.dot, 'animate-pulse']
-                        : 'bg-muted-foreground/40'"
+                    :class="
+                        isMyTurn
+                            ? [myColor.dot, 'animate-pulse']
+                            : 'bg-muted-foreground/40'
+                    "
                 />
-                <span v-if="isMyTurn" class="font-medium" :class="myColor.text">Your turn</span>
+                <span v-if="isMyTurn" class="font-medium" :class="myColor.text"
+                    >Your turn</span
+                >
                 <span v-else class="text-muted-foreground">
                     Waiting on
-                    <span :class="pc(game.current_turn_user_id).text" class="font-medium">{{ game.current_turn_user.name }}</span>…
+                    <span
+                        :class="pc(game.current_turn_user_id).text"
+                        class="font-medium"
+                        >{{ game.current_turn_user.name }}</span
+                    >…
                 </span>
                 <span class="text-xs text-muted-foreground">·</span>
                 <span class="text-xs text-muted-foreground">
-                    {{ game.rolls_left }} {{ game.rolls_left === 1 ? 'roll' : 'rolls' }} left
+                    {{ game.rolls_left }}
+                    {{ game.rolls_left === 1 ? 'roll' : 'rolls' }} left
                 </span>
             </div>
 
@@ -264,8 +302,20 @@ const upperRemaining = computed(() => {
                             game.rolls_left === 3
                                 ? 'border-muted bg-muted/20 text-muted-foreground/60'
                                 : die.held
-                                    ? ['scale-105 shadow-lg', myColor.softBorder, myColor.softBg, myColor.text, 'ring-2 ring-offset-2', myColor.ring]
-                                    : ['shadow-md', DIE_FACES[die.value].border, DIE_FACES[die.value].bg, DIE_FACES[die.value].text],
+                                  ? [
+                                        'scale-105 shadow-lg',
+                                        myColor.softBorder,
+                                        myColor.softBg,
+                                        myColor.text,
+                                        'ring-2 ring-offset-2',
+                                        myColor.ring,
+                                    ]
+                                  : [
+                                        'shadow-md',
+                                        DIE_FACES[die.value].border,
+                                        DIE_FACES[die.value].bg,
+                                        DIE_FACES[die.value].text,
+                                    ],
                             isMyTurn && game.rolls_left < 3
                                 ? 'cursor-pointer hover:-translate-y-0.5 hover:shadow-lg active:scale-100'
                                 : 'cursor-default',
@@ -275,17 +325,27 @@ const upperRemaining = computed(() => {
                         @click="toggleHold(idx)"
                     >
                         <span class="leading-none">
-                            {{ game.rolls_left === 3 ? '?' : DIE_FACES[die.value].glyph }}
+                            {{
+                                game.rolls_left === 3
+                                    ? '?'
+                                    : DIE_FACES[die.value].glyph
+                            }}
                         </span>
                         <Pin
                             v-if="die.held && game.rolls_left < 3"
-                            class="absolute -right-1.5 -top-1.5 h-5 w-5 rounded-full bg-background p-0.5 shadow-sm"
+                            class="absolute -top-1.5 -right-1.5 h-5 w-5 rounded-full bg-background p-0.5 shadow-sm"
                             :class="myColor.text"
                         />
                     </button>
                 </div>
                 <div class="mt-4 text-center text-xs text-muted-foreground">
-                    <template v-if="isMyTurn && game.rolls_left < 3 && game.rolls_left > 0">
+                    <template
+                        v-if="
+                            isMyTurn &&
+                            game.rolls_left < 3 &&
+                            game.rolls_left > 0
+                        "
+                    >
                         Tap a die to hold it for the next roll.
                     </template>
                     <template v-else-if="isMyTurn && game.rolls_left === 3">
@@ -296,7 +356,11 @@ const upperRemaining = computed(() => {
                     </template>
                 </div>
                 <div class="mt-3 flex justify-center">
-                    <Button :disabled="!canRoll || isRolling" size="lg" @click="rollDice">
+                    <Button
+                        :disabled="!canRoll || isRolling"
+                        size="lg"
+                        @click="rollDice"
+                    >
                         <Dices class="mr-2 h-5 w-5" />
                         Roll ({{ game.rolls_left }} left)
                     </Button>
@@ -309,28 +373,51 @@ const upperRemaining = computed(() => {
                     <!-- Player header strip -->
                     <thead>
                         <tr class="border-b">
-                            <th class="bg-muted/40 px-3 py-2 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                            <th
+                                class="bg-muted/40 px-3 py-2 text-left text-xs font-medium tracking-wider text-muted-foreground uppercase"
+                            >
                                 Scorecard
                             </th>
                             <th
-                                v-for="pid in [game.player_one_id, game.player_two_id]"
+                                v-for="pid in [
+                                    game.player_one_id,
+                                    game.player_two_id,
+                                ]"
                                 :key="pid"
                                 class="px-3 py-2 text-right transition-colors"
-                                :class="[isActiveColumn(pid) ? pc(pid).tint : 'bg-muted/40']"
+                                :class="[
+                                    isActiveColumn(pid)
+                                        ? pc(pid).tint
+                                        : 'bg-muted/40',
+                                ]"
                             >
-                                <div class="flex items-center justify-end gap-1.5">
+                                <div
+                                    class="flex items-center justify-end gap-1.5"
+                                >
                                     <span
                                         class="inline-block h-1.5 w-1.5 rounded-full"
                                         :class="[
                                             pc(pid).dot,
-                                            isActiveColumn(pid) ? 'animate-pulse' : 'opacity-50',
+                                            isActiveColumn(pid)
+                                                ? 'animate-pulse'
+                                                : 'opacity-50',
                                         ]"
                                     />
-                                    <span class="text-sm font-medium" :class="pc(pid).text">
-                                        {{ pid === game.player_one_id ? game.player_one.name : game.player_two.name }}
+                                    <span
+                                        class="text-sm font-medium"
+                                        :class="pc(pid).text"
+                                    >
+                                        {{
+                                            pid === game.player_one_id
+                                                ? game.player_one.name
+                                                : game.player_two.name
+                                        }}
                                     </span>
                                 </div>
-                                <div class="text-xl font-bold tabular-nums" :class="pc(pid).text">
+                                <div
+                                    class="text-xl font-bold tabular-nums"
+                                    :class="pc(pid).text"
+                                >
                                     {{ totals[pid].grand }}
                                 </div>
                             </th>
@@ -339,61 +426,106 @@ const upperRemaining = computed(() => {
 
                     <tbody>
                         <!-- Upper section header -->
-                        <tr class="border-b border-t bg-muted/20">
-                            <td colspan="3" class="px-3 py-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                        <tr class="border-t border-b bg-muted/20">
+                            <td
+                                colspan="3"
+                                class="px-3 py-1 text-[10px] font-semibold tracking-wider text-muted-foreground uppercase"
+                            >
                                 Upper · count matching dice
                             </td>
                         </tr>
 
                         <!-- Upper rows -->
-                        <tr v-for="cat in UPPER_CATEGORIES" :key="cat" class="border-b last:border-b-0">
-                            <td class="px-3 py-2">{{ CATEGORY_LABELS[cat] }}</td>
+                        <tr
+                            v-for="cat in UPPER_CATEGORIES"
+                            :key="cat"
+                            class="border-b last:border-b-0"
+                        >
+                            <td class="px-3 py-2">
+                                {{ CATEGORY_LABELS[cat] }}
+                            </td>
 
                             <td
-                                v-for="pid in [game.player_one_id, game.player_two_id]"
+                                v-for="pid in [
+                                    game.player_one_id,
+                                    game.player_two_id,
+                                ]"
                                 :key="pid"
                                 class="px-3 py-1.5 text-right tabular-nums"
                                 :class="isActiveColumn(pid) ? pc(pid).tint : ''"
                             >
-                                <template v-if="cellKind(pid, cat) === 'filled'">
-                                    <span class="font-medium">{{ cellNumber(pid, cat) }}</span>
+                                <template
+                                    v-if="cellKind(pid, cat) === 'filled'"
+                                >
+                                    <span class="font-medium">{{
+                                        cellNumber(pid, cat)
+                                    }}</span>
                                 </template>
-                                <template v-else-if="cellKind(pid, cat) === 'preview-positive'">
+                                <template
+                                    v-else-if="
+                                        cellKind(pid, cat) ===
+                                        'preview-positive'
+                                    "
+                                >
                                     <button
                                         type="button"
                                         class="inline-flex items-center gap-1 rounded-md border px-2.5 py-1 text-sm font-semibold shadow-sm transition-all hover:-translate-y-0.5 hover:shadow active:translate-y-0 active:scale-95"
-                                        :class="[myColor.softBorder, myColor.softBg, myColor.text, myColor.hoverBg]"
+                                        :class="[
+                                            myColor.softBorder,
+                                            myColor.softBg,
+                                            myColor.text,
+                                            myColor.hoverBg,
+                                        ]"
                                         @click="chooseCategory(cat)"
                                     >
-                                        <Sparkles v-if="cat === bestCategory" class="h-3.5 w-3.5" />
+                                        <Sparkles
+                                            v-if="cat === bestCategory"
+                                            class="h-3.5 w-3.5"
+                                        />
                                         {{ cellNumber(pid, cat) }}
                                     </button>
                                 </template>
-                                <template v-else-if="cellKind(pid, cat) === 'preview-zero'">
+                                <template
+                                    v-else-if="
+                                        cellKind(pid, cat) === 'preview-zero'
+                                    "
+                                >
                                     <button
                                         type="button"
                                         class="inline-flex items-center rounded-md border border-muted-foreground/20 bg-muted/30 px-2.5 py-1 text-xs text-muted-foreground transition-all hover:bg-muted hover:text-muted-foreground active:scale-95"
                                         @click="chooseCategory(cat)"
                                     >
-                                        <span class="line-through decoration-1">0</span>
+                                        <span class="line-through decoration-1"
+                                            >0</span
+                                        >
                                     </button>
                                 </template>
                                 <template v-else>
-                                    <span class="text-muted-foreground/40">—</span>
+                                    <span class="text-muted-foreground/40"
+                                        >—</span
+                                    >
                                 </template>
                             </td>
                         </tr>
 
                         <!-- Upper subtotal + bonus -->
                         <tr class="border-b bg-muted/20 text-xs">
-                            <td class="px-3 py-1.5 italic text-muted-foreground">
+                            <td
+                                class="px-3 py-1.5 text-muted-foreground italic"
+                            >
                                 Upper subtotal
-                                <span v-if="isMyTurn && upperRemaining > 0" class="ml-1 text-[10px]">
+                                <span
+                                    v-if="isMyTurn && upperRemaining > 0"
+                                    class="ml-1 text-[10px]"
+                                >
                                     (need {{ upperRemaining }} more for bonus)
                                 </span>
                             </td>
                             <td
-                                v-for="pid in [game.player_one_id, game.player_two_id]"
+                                v-for="pid in [
+                                    game.player_one_id,
+                                    game.player_two_id,
+                                ]"
                                 :key="pid"
                                 class="px-3 py-1.5 text-right tabular-nums"
                                 :class="isActiveColumn(pid) ? pc(pid).tint : ''"
@@ -402,9 +534,16 @@ const upperRemaining = computed(() => {
                             </td>
                         </tr>
                         <tr class="border-b bg-muted/20 text-xs">
-                            <td class="px-3 py-1.5 italic text-muted-foreground">Upper bonus (+35)</td>
                             <td
-                                v-for="pid in [game.player_one_id, game.player_two_id]"
+                                class="px-3 py-1.5 text-muted-foreground italic"
+                            >
+                                Upper bonus (+35)
+                            </td>
+                            <td
+                                v-for="pid in [
+                                    game.player_one_id,
+                                    game.player_two_id,
+                                ]"
                                 :key="pid"
                                 class="px-3 py-1.5 text-right tabular-nums"
                                 :class="[
@@ -414,13 +553,20 @@ const upperRemaining = computed(() => {
                                         : 'text-muted-foreground/50',
                                 ]"
                             >
-                                {{ totals[pid].upper_bonus > 0 ? `+${totals[pid].upper_bonus}` : '—' }}
+                                {{
+                                    totals[pid].upper_bonus > 0
+                                        ? `+${totals[pid].upper_bonus}`
+                                        : '—'
+                                }}
                             </td>
                         </tr>
 
                         <!-- Lower section header -->
-                        <tr class="border-b border-t bg-muted/20">
-                            <td colspan="3" class="px-3 py-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                        <tr class="border-t border-b bg-muted/20">
+                            <td
+                                colspan="3"
+                                class="px-3 py-1 text-[10px] font-semibold tracking-wider text-muted-foreground uppercase"
+                            >
                                 Lower · combinations
                             </td>
                         </tr>
@@ -430,65 +576,122 @@ const upperRemaining = computed(() => {
                             v-for="cat in LOWER_CATEGORIES"
                             :key="cat"
                             class="border-b last:border-b-0"
-                            :class="cat === 'yahtzee' ? 'bg-gradient-to-r from-amber-50/50 to-transparent dark:from-amber-950/20' : ''"
+                            :class="
+                                cat === 'yahtzee'
+                                    ? 'bg-gradient-to-r from-amber-50/50 to-transparent dark:from-amber-950/20'
+                                    : ''
+                            "
                         >
                             <td class="px-3 py-2">
-                                <span :class="cat === 'yahtzee' ? 'font-semibold text-amber-700 dark:text-amber-300' : ''">
+                                <span
+                                    :class="
+                                        cat === 'yahtzee'
+                                            ? 'font-semibold text-amber-700 dark:text-amber-300'
+                                            : ''
+                                    "
+                                >
                                     {{ CATEGORY_LABELS[cat] }}
                                 </span>
-                                <span class="ml-1 text-[10px] text-muted-foreground/60">
-                                    {{ cat === 'full_house' ? '25' :
-                                        cat === 'small_straight' ? '30' :
-                                        cat === 'large_straight' ? '40' :
-                                        cat === 'yahtzee' ? '50' : '' }}
+                                <span
+                                    class="ml-1 text-[10px] text-muted-foreground/60"
+                                >
+                                    {{
+                                        cat === 'full_house'
+                                            ? '25'
+                                            : cat === 'small_straight'
+                                              ? '30'
+                                              : cat === 'large_straight'
+                                                ? '40'
+                                                : cat === 'yahtzee'
+                                                  ? '50'
+                                                  : ''
+                                    }}
                                 </span>
                             </td>
 
                             <td
-                                v-for="pid in [game.player_one_id, game.player_two_id]"
+                                v-for="pid in [
+                                    game.player_one_id,
+                                    game.player_two_id,
+                                ]"
                                 :key="pid"
                                 class="px-3 py-1.5 text-right tabular-nums"
                                 :class="isActiveColumn(pid) ? pc(pid).tint : ''"
                             >
-                                <template v-if="cellKind(pid, cat) === 'filled'">
+                                <template
+                                    v-if="cellKind(pid, cat) === 'filled'"
+                                >
                                     <span
                                         class="font-medium"
-                                        :class="cat === 'yahtzee' && cellNumber(pid, cat) === 50 ? 'text-amber-700 dark:text-amber-400' : ''"
+                                        :class="
+                                            cat === 'yahtzee' &&
+                                            cellNumber(pid, cat) === 50
+                                                ? 'text-amber-700 dark:text-amber-400'
+                                                : ''
+                                        "
                                     >
                                         {{ cellNumber(pid, cat) }}
                                     </span>
                                 </template>
-                                <template v-else-if="cellKind(pid, cat) === 'preview-positive'">
+                                <template
+                                    v-else-if="
+                                        cellKind(pid, cat) ===
+                                        'preview-positive'
+                                    "
+                                >
                                     <button
                                         type="button"
                                         class="inline-flex items-center gap-1 rounded-md border px-2.5 py-1 text-sm font-semibold shadow-sm transition-all hover:-translate-y-0.5 hover:shadow active:translate-y-0 active:scale-95"
-                                        :class="[myColor.softBorder, myColor.softBg, myColor.text, myColor.hoverBg]"
+                                        :class="[
+                                            myColor.softBorder,
+                                            myColor.softBg,
+                                            myColor.text,
+                                            myColor.hoverBg,
+                                        ]"
                                         @click="chooseCategory(cat)"
                                     >
-                                        <Sparkles v-if="cat === bestCategory" class="h-3.5 w-3.5" />
+                                        <Sparkles
+                                            v-if="cat === bestCategory"
+                                            class="h-3.5 w-3.5"
+                                        />
                                         {{ cellNumber(pid, cat) }}
                                     </button>
                                 </template>
-                                <template v-else-if="cellKind(pid, cat) === 'preview-zero'">
+                                <template
+                                    v-else-if="
+                                        cellKind(pid, cat) === 'preview-zero'
+                                    "
+                                >
                                     <button
                                         type="button"
                                         class="inline-flex items-center rounded-md border border-muted-foreground/20 bg-muted/30 px-2.5 py-1 text-xs text-muted-foreground transition-all hover:bg-muted hover:text-muted-foreground active:scale-95"
                                         @click="chooseCategory(cat)"
                                     >
-                                        <span class="line-through decoration-1">0</span>
+                                        <span class="line-through decoration-1"
+                                            >0</span
+                                        >
                                     </button>
                                 </template>
                                 <template v-else>
-                                    <span class="text-muted-foreground/40">—</span>
+                                    <span class="text-muted-foreground/40"
+                                        >—</span
+                                    >
                                 </template>
                             </td>
                         </tr>
 
                         <!-- Yahtzee bonus -->
                         <tr class="border-b bg-muted/20 text-xs">
-                            <td class="px-3 py-1.5 italic text-muted-foreground">Yahtzee bonus (+100 each)</td>
                             <td
-                                v-for="pid in [game.player_one_id, game.player_two_id]"
+                                class="px-3 py-1.5 text-muted-foreground italic"
+                            >
+                                Yahtzee bonus (+100 each)
+                            </td>
+                            <td
+                                v-for="pid in [
+                                    game.player_one_id,
+                                    game.player_two_id,
+                                ]"
                                 :key="pid"
                                 class="px-3 py-1.5 text-right tabular-nums"
                                 :class="[
@@ -498,17 +701,26 @@ const upperRemaining = computed(() => {
                                         : 'text-muted-foreground/50',
                                 ]"
                             >
-                                {{ totals[pid].yahtzee_bonus > 0 ? `+${totals[pid].yahtzee_bonus}` : '—' }}
+                                {{
+                                    totals[pid].yahtzee_bonus > 0
+                                        ? `+${totals[pid].yahtzee_bonus}`
+                                        : '—'
+                                }}
                             </td>
                         </tr>
 
                         <!-- Grand total -->
                         <tr class="border-t-2 font-bold">
-                            <td class="bg-muted/40 px-3 py-2.5 text-xs uppercase tracking-wider text-muted-foreground">
+                            <td
+                                class="bg-muted/40 px-3 py-2.5 text-xs tracking-wider text-muted-foreground uppercase"
+                            >
                                 Total
                             </td>
                             <td
-                                v-for="pid in [game.player_one_id, game.player_two_id]"
+                                v-for="pid in [
+                                    game.player_one_id,
+                                    game.player_two_id,
+                                ]"
                                 :key="pid"
                                 class="px-3 py-2.5 text-right text-base tabular-nums"
                                 :class="[pc(pid).tint, pc(pid).text]"
@@ -521,11 +733,18 @@ const upperRemaining = computed(() => {
             </div>
 
             <!-- Legend / hint -->
-            <div v-if="canScore" class="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-xs text-muted-foreground">
+            <div
+                v-if="canScore"
+                class="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-xs text-muted-foreground"
+            >
                 <span class="inline-flex items-center gap-1.5">
                     <span
                         class="inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-xs font-semibold"
-                        :class="[myColor.softBorder, myColor.softBg, myColor.text]"
+                        :class="[
+                            myColor.softBorder,
+                            myColor.softBg,
+                            myColor.text,
+                        ]"
                     >
                         <Sparkles class="h-3 w-3" />
                         12
@@ -535,20 +754,28 @@ const upperRemaining = computed(() => {
                 <span class="inline-flex items-center gap-1.5">
                     <span
                         class="inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-semibold"
-                        :class="[myColor.softBorder, myColor.softBg, myColor.text]"
+                        :class="[
+                            myColor.softBorder,
+                            myColor.softBg,
+                            myColor.text,
+                        ]"
                     >
                         8
                     </span>
                     Tap to score
                 </span>
                 <span class="inline-flex items-center gap-1.5">
-                    <span class="inline-flex items-center rounded-md border border-muted-foreground/20 bg-muted/30 px-2 py-0.5 text-xs text-muted-foreground">
+                    <span
+                        class="inline-flex items-center rounded-md border border-muted-foreground/20 bg-muted/30 px-2 py-0.5 text-xs text-muted-foreground"
+                    >
                         <span class="line-through">0</span>
                     </span>
                     Scratch
                 </span>
                 <span class="inline-flex items-center gap-1.5">
-                    <Circle class="h-2.5 w-2.5 fill-muted-foreground/40 text-muted-foreground/40" />
+                    <Circle
+                        class="h-2.5 w-2.5 fill-muted-foreground/40 text-muted-foreground/40"
+                    />
                     Locked
                 </span>
             </div>

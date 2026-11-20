@@ -47,6 +47,9 @@ class HandleInertiaRequests extends Middleware
                 'status' => $request->session()->get('status'),
                 'error' => $request->session()->get('error'),
             ],
+            'realtime' => fn () => $user && \App\Support\FamilyRealtime::enabled()
+                ? ['familyId' => $user->familyOwnerId()]
+                : null,
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
             'familyRole' => fn () => $user
                 ? ($user->linkedFamilyMember()?->role?->value

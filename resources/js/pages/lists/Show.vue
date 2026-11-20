@@ -23,7 +23,7 @@ import { AISLES, LIST_TYPE_LABELS } from '@/types/lists';
 
 // Flash data only arrives on the first response, so capture it once (the poll replaces props).
 const notice = ref<string | null>(
-    ((usePage().props.flash as { status?: string } | undefined)?.status) ?? null,
+    (usePage().props.flash as { status?: string } | undefined)?.status ?? null,
 );
 
 const props = defineProps<{
@@ -38,7 +38,8 @@ const breadcrumbs: BreadcrumbItem[] = [
 ];
 
 // Live sync: re-fetch just the list every few seconds (pauses in background tabs).
-usePoll(5000, { only: ['list'] });
+// Realtime (websocket) refreshes this page; poll only when it isn't configured.
+usePoll(5000, { only: ['list'] }, { autoStart: !usePage().props.realtime });
 
 // Local copy so checking items feels instant, even on slow store wifi.
 const items = ref<FamilyListItem[]>([...(props.list.items ?? [])]);
@@ -310,7 +311,8 @@ function onListSaved() {
                             >
                                 <!-- Normal display mode -->
                                 <template v-if="editingItemId !== item.id">
-                                    <Checkbox class="size-5"
+                                    <Checkbox
+                                        class="size-5"
                                         :aria-label="`Mark ${item.name} ${item.is_completed ? 'not done' : 'done'}`"
                                         :model-value="item.is_completed"
                                         @click.stop
@@ -352,7 +354,8 @@ function onListSaved() {
                                             {{ item.notes }}
                                         </p>
                                     </div>
-                                    <Button aria-label="Edit"
+                                    <Button
+                                        aria-label="Edit"
                                         variant="ghost"
                                         size="icon"
                                         class="h-8 w-8 shrink-0"
@@ -360,7 +363,8 @@ function onListSaved() {
                                     >
                                         <Pencil class="h-3 w-3" />
                                     </Button>
-                                    <Button aria-label="Delete item"
+                                    <Button
+                                        aria-label="Delete item"
                                         variant="ghost"
                                         size="icon"
                                         class="h-8 w-8 shrink-0 text-muted-foreground hover:text-destructive"
@@ -413,7 +417,8 @@ function onListSaved() {
                                             @keydown.escape="cancelEdit"
                                         />
                                     </div>
-                                    <Button aria-label="Save"
+                                    <Button
+                                        aria-label="Save"
                                         variant="ghost"
                                         size="icon"
                                         class="h-8 w-8 shrink-0"
@@ -421,7 +426,8 @@ function onListSaved() {
                                     >
                                         <Check class="h-3 w-3" />
                                     </Button>
-                                    <Button aria-label="Cancel"
+                                    <Button
+                                        aria-label="Cancel"
                                         variant="ghost"
                                         size="icon"
                                         class="h-8 w-8 shrink-0"
