@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import { formatEventTime, formatEventDateFull, EVENT_COLORS, getEventColor, toLocalDateString } from '@/lib/calendar';
 import type { CalendarEvent } from '@/types/calendar';
 
@@ -27,6 +27,17 @@ const sortedDates = computed(() => {
     return entries;
 });
 
+// Past days are folded away so the agenda starts at today.
+const showPast = ref(false);
+const pastCount = computed(
+    () => sortedDates.value.filter((d) => d.dateKey < todayStr.value).length,
+);
+const visibleDates = computed(() =>
+    showPast.value
+        ? sortedDates.value
+        : sortedDates.value.filter((d) => d.dateKey >= todayStr.value),
+);
+
 function formatDateHeading(dateKey: string): string {
     const [year, month, day] = dateKey.split('-').map(Number);
     const date = new Date(year, month - 1, day);
@@ -36,11 +47,20 @@ function formatDateHeading(dateKey: string): string {
 
 <template>
     <div class="space-y-6">
-        <div v-if="sortedDates.length === 0" class="text-center py-12 text-muted-foreground">
-            No events in this period.
+        <button
+            v-if="pastCount > 0"
+            type="button"
+            class="w-full rounded-md border border-dashed py-2 text-sm text-muted-foreground hover:bg-accent"
+            @click="showPast = !showPast"
+        >
+            {{ showPast ? 'Hide' : 'Show' }} {{ pastCount }} earlier {{ pastCount === 1 ? 'day' : 'days' }}
+        </button>
+
+        <div v-if="visibleDates.length === 0" class="text-center py-12 text-muted-foreground">
+            No upcoming events in this period.
         </div>
 
-        <div v-for="{ dateKey, events } in sortedDates" :key="dateKey">
+        <div v-for="{ dateKey, events } in visibleDates" :key="dateKey">
             <h3
                 :class="[
                     'text-sm font-semibold mb-2 pb-1 border-b border-border',

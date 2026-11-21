@@ -62,6 +62,7 @@ export default defineConfig({
                 ],
             },
             workbox: {
+                importScripts: ['/push-sw.js'],
                 navigateFallback: '/offline',
                 navigateFallbackDenylist: [/^\/api/, /^\/sanctum/, /^\/_ignition/, /^\/telescope/],
                 runtimeCaching: [

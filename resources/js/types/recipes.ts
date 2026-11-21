@@ -65,9 +65,9 @@ export const DIFFICULTY_LABELS: Record<RecipeDifficulty, string> = {
 };
 
 export const DIFFICULTY_COLORS: Record<RecipeDifficulty, string> = {
-    easy: 'text-green-600',
-    medium: 'text-yellow-600',
-    hard: 'text-red-600',
+    easy: 'text-green-800 dark:text-green-400',
+    medium: 'text-yellow-800 dark:text-yellow-400',
+    hard: 'text-red-800 dark:text-red-400',
 };
 
 export const COOKBOOK_VISIBILITY_LABELS: Record<CookbookVisibility, string> = {

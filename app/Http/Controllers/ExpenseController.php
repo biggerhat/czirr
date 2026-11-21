@@ -5,18 +5,21 @@ namespace App\Http\Controllers;
 use App\Models\Expense;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class ExpenseController extends Controller
 {
     public function store(Request $request): JsonResponse
     {
+        $ownerId = $request->user()->familyOwnerId();
+
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'amount' => ['required', 'numeric', 'min:0'],
-            'budget_category_id' => ['required', 'exists:budget_categories,id'],
+            'budget_category_id' => ['required', Rule::exists('budget_categories', 'id')->where('user_id', $ownerId)],
             'date' => ['required', 'date'],
             'notes' => ['nullable', 'string'],
-            'bill_id' => ['nullable', 'exists:bills,id'],
+            'bill_id' => ['nullable', Rule::exists('bills', 'id')->where('user_id', $ownerId)],
         ]);
 
         $owner = $request->user()->familyOwner();

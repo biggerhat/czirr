@@ -12,6 +12,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
  * @property-read User|null $linkedUser
+ * @property-read string $display_name
  */
 class FamilyMember extends Model
 {
@@ -35,11 +36,13 @@ class FamilyMember extends Model
         return Attribute::get(fn () => $this->nickname ?? $this->name);
     }
 
+    /** @return BelongsTo<User, $this> */
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
     }
 
+    /** @return BelongsTo<User, $this> */
     public function linkedUser(): BelongsTo
     {
         return $this->belongsTo(User::class, 'linked_user_id');

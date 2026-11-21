@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Services\BudgetInsightsService;
 use App\Services\BudgetService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -11,7 +12,8 @@ use Inertia\Response;
 class BudgetController extends Controller
 {
     public function __construct(
-        private BudgetService $budgetService
+        private BudgetService $budgetService,
+        private BudgetInsightsService $insights,
     ) {}
 
     public function index(Request $request): Response
@@ -30,10 +32,16 @@ class BudgetController extends Controller
             );
         } else {
             $monthParam = $request->input('month');
-            $month = $monthParam ? Carbon::parse($monthParam.'-01') : Carbon::now();
+            $month = $monthParam ? Carbon::parse($monthParam.'-01') : $request->user()->localNow();
             $overview = $this->budgetService->getMonthlyOverview($owner, $month);
         }
 
-        return Inertia::render('budgeting/Index', $overview);
+        // Deferred: the six-month trend is the heaviest part and isn't needed to paint the page.
+        $insightsMonth = Carbon::parse(($overview['month'] ?? $request->user()->localNow()->format('Y-m')).'-01');
+
+        return Inertia::render('budgeting/Index', [
+            ...$overview,
+            'insights' => Inertia::defer(fn () => $this->insights->build($owner, $insightsMonth)),
+        ]);
     }
 }

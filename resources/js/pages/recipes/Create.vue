@@ -21,6 +21,7 @@ import {
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import AppLayout from '@/layouts/AppLayout.vue';
+import { api } from '@/lib/api';
 import type { BreadcrumbItem } from '@/types';
 import type { Cuisine, RecipeTag, RecipeDifficulty } from '@/types/recipes';
 import { DIFFICULTY_LABELS } from '@/types/recipes';
@@ -35,14 +36,21 @@ const breadcrumbs: BreadcrumbItem[] = [
     { title: 'New Recipe' },
 ];
 
-type IngredientForm = { name: string; quantity: string; unit: string; notes: string };
+type IngredientForm = {
+    name: string;
+    quantity: string;
+    unit: string;
+    notes: string;
+};
 
 const isSaving = ref(false);
 const errors = ref<Record<string, string[]>>({});
 
 const name = ref('');
 const description = ref('');
-const ingredients = ref<IngredientForm[]>([{ name: '', quantity: '', unit: '', notes: '' }]);
+const ingredients = ref<IngredientForm[]>([
+    { name: '', quantity: '', unit: '', notes: '' },
+]);
 const instructions = ref('');
 const prepTime = ref(0);
 const cookTime = ref(0);
@@ -53,6 +61,48 @@ const cuisineId = ref<string>('');
 const difficulty = ref<RecipeDifficulty>('easy');
 const selectedTagIds = ref<number[]>([]);
 const notes = ref('');
+
+// Import from URL
+const importUrl = ref('');
+const isImporting = ref(false);
+const importError = ref<string | null>(null);
+
+async function importFromUrl() {
+    if (!importUrl.value.trim()) return;
+    isImporting.value = true;
+    importError.value = null;
+
+    const res = await api<{
+        name: string;
+        description: string;
+        ingredients: IngredientForm[];
+        instructions: string;
+        prep_time: number;
+        cook_time: number;
+        servings: number;
+        image_url: string | null;
+        source_url: string;
+    }>('POST', '/recipes/import', { url: importUrl.value.trim() });
+    isImporting.value = false;
+
+    if (!res.ok || !res.data) {
+        importError.value = res.message ?? 'Could not import that recipe.';
+        return;
+    }
+
+    const r = res.data;
+    name.value = r.name;
+    description.value = r.description;
+    ingredients.value = r.ingredients.length
+        ? r.ingredients
+        : [{ name: '', quantity: '', unit: '', notes: '' }];
+    instructions.value = r.instructions;
+    prepTime.value = r.prep_time;
+    cookTime.value = r.cook_time;
+    servings.value = r.servings;
+    imageUrl.value = r.image_url ?? '';
+    sourceUrl.value = r.source_url;
+}
 
 // Inline-create state
 const allCuisines = ref<Cuisine[]>([...props.cuisines]);
@@ -65,7 +115,7 @@ const showCuisineCreate = ref(false);
 const showTagCreate = ref(false);
 
 const selectedTags = computed(() =>
-    allTags.value.filter(t => selectedTagIds.value.includes(t.id)),
+    allTags.value.filter((t) => selectedTagIds.value.includes(t.id)),
 );
 
 function toggleTag(tagId: number) {
@@ -91,7 +141,7 @@ async function createCuisine() {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'Accept': 'application/json',
+                Accept: 'application/json',
                 'X-Requested-With': 'XMLHttpRequest',
                 'X-XSRF-TOKEN': decodeURIComponent(
                     document.cookie.match(/XSRF-TOKEN=([^;]+)/)?.[1] ?? '',
@@ -122,7 +172,7 @@ async function createTag() {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'Accept': 'application/json',
+                Accept: 'application/json',
                 'X-Requested-With': 'XMLHttpRequest',
                 'X-XSRF-TOKEN': decodeURIComponent(
                     document.cookie.match(/XSRF-TOKEN=([^;]+)/)?.[1] ?? '',
@@ -161,7 +211,7 @@ async function save() {
     const body: Record<string, unknown> = {
         name: name.value,
         description: description.value || null,
-        ingredients: ingredients.value.map(i => ({
+        ingredients: ingredients.value.map((i) => ({
             name: i.name,
             quantity: i.quantity || null,
             unit: i.unit || null,
@@ -173,7 +223,10 @@ async function save() {
         servings: servings.value,
         image_url: imageUrl.value || null,
         source_url: sourceUrl.value || null,
-        cuisine_id: cuisineId.value && cuisineId.value !== 'none' ? Number(cuisineId.value) : null,
+        cuisine_id:
+            cuisineId.value && cuisineId.value !== 'none'
+                ? Number(cuisineId.value)
+                : null,
         difficulty: difficulty.value,
         tag_ids: selectedTagIds.value,
         notes: notes.value || null,
@@ -184,7 +237,7 @@ async function save() {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'Accept': 'application/json',
+                Accept: 'application/json',
                 'X-Requested-With': 'XMLHttpRequest',
                 'X-XSRF-TOKEN': decodeURIComponent(
                     document.cookie.match(/XSRF-TOKEN=([^;]+)/)?.[1] ?? '',
@@ -200,7 +253,9 @@ async function save() {
             const data = await response.json();
             errors.value = data.errors ?? {};
         } else {
-            errors.value = { name: [`Save failed (${response.status}). Please try again.`] };
+            errors.value = {
+                name: [`Save failed (${response.status}). Please try again.`],
+            };
         }
     } finally {
         isSaving.value = false;
@@ -210,21 +265,66 @@ async function save() {
 
 <template>
     <AppLayout :breadcrumbs="breadcrumbs">
-        <div class="flex h-full flex-1 flex-col gap-4 p-4 items-center">
+        <div class="flex h-full flex-1 flex-col items-center gap-4 p-4">
             <form @submit.prevent="save" class="w-full max-w-2xl space-y-6">
                 <h2 class="text-lg font-semibold">New Recipe</h2>
+
+                <!-- Import from URL -->
+                <div class="space-y-2 rounded-lg border bg-muted/30 p-3">
+                    <Label for="import-url">Import from a website</Label>
+                    <div class="flex gap-2">
+                        <Input
+                            id="import-url"
+                            v-model="importUrl"
+                            type="url"
+                            placeholder="https://… (paste a recipe link)"
+                            @keydown.enter.prevent="importFromUrl"
+                        />
+                        <Button
+                            type="button"
+                            variant="outline"
+                            :disabled="isImporting || !importUrl.trim()"
+                            @click="importFromUrl"
+                        >
+                            {{ isImporting ? 'Importing…' : 'Import' }}
+                        </Button>
+                    </div>
+                    <p v-if="importError" class="text-sm text-destructive">
+                        {{ importError }}
+                    </p>
+                    <p v-else class="text-xs text-muted-foreground">
+                        Fills in the form below — review it before saving.
+                    </p>
+                </div>
                 <!-- Name -->
                 <div class="space-y-2">
                     <Label for="recipe-name">Name</Label>
-                    <Input id="recipe-name" v-model="name" placeholder="e.g. Chicken Parmesan" required />
-                    <p v-if="errors.name" class="text-sm text-destructive">{{ errors.name[0] }}</p>
+                    <Input
+                        id="recipe-name"
+                        v-model="name"
+                        placeholder="e.g. Chicken Parmesan"
+                        required
+                    />
+                    <p v-if="errors.name" class="text-sm text-destructive">
+                        {{ errors.name[0] }}
+                    </p>
                 </div>
 
                 <!-- Description -->
                 <div class="space-y-2">
                     <Label for="recipe-description">Description</Label>
-                    <Textarea id="recipe-description" v-model="description" placeholder="Brief description..." rows="2" />
-                    <p v-if="errors.description" class="text-sm text-destructive">{{ errors.description[0] }}</p>
+                    <Textarea
+                        id="recipe-description"
+                        v-model="description"
+                        placeholder="Brief description..."
+                        rows="2"
+                    />
+                    <p
+                        v-if="errors.description"
+                        class="text-sm text-destructive"
+                    >
+                        {{ errors.description[0] }}
+                    </p>
                 </div>
 
                 <!-- Difficulty, Times, Servings -->
@@ -245,22 +345,60 @@ async function save() {
                                 </SelectItem>
                             </SelectContent>
                         </Select>
-                        <p v-if="errors.difficulty" class="text-sm text-destructive">{{ errors.difficulty[0] }}</p>
+                        <p
+                            v-if="errors.difficulty"
+                            class="text-sm text-destructive"
+                        >
+                            {{ errors.difficulty[0] }}
+                        </p>
                     </div>
                     <div class="space-y-2">
                         <Label for="recipe-prep">Prep (min)</Label>
-                        <Input id="recipe-prep" v-model.number="prepTime" type="number" min="0" required />
-                        <p v-if="errors.prep_time" class="text-sm text-destructive">{{ errors.prep_time[0] }}</p>
+                        <Input
+                            id="recipe-prep"
+                            v-model.number="prepTime"
+                            type="number"
+                            min="0"
+                            required
+                        />
+                        <p
+                            v-if="errors.prep_time"
+                            class="text-sm text-destructive"
+                        >
+                            {{ errors.prep_time[0] }}
+                        </p>
                     </div>
                     <div class="space-y-2">
                         <Label for="recipe-cook">Cook (min)</Label>
-                        <Input id="recipe-cook" v-model.number="cookTime" type="number" min="0" required />
-                        <p v-if="errors.cook_time" class="text-sm text-destructive">{{ errors.cook_time[0] }}</p>
+                        <Input
+                            id="recipe-cook"
+                            v-model.number="cookTime"
+                            type="number"
+                            min="0"
+                            required
+                        />
+                        <p
+                            v-if="errors.cook_time"
+                            class="text-sm text-destructive"
+                        >
+                            {{ errors.cook_time[0] }}
+                        </p>
                     </div>
                     <div class="space-y-2">
                         <Label for="recipe-servings">Servings</Label>
-                        <Input id="recipe-servings" v-model.number="servings" type="number" min="1" required />
-                        <p v-if="errors.servings" class="text-sm text-destructive">{{ errors.servings[0] }}</p>
+                        <Input
+                            id="recipe-servings"
+                            v-model.number="servings"
+                            type="number"
+                            min="1"
+                            required
+                        />
+                        <p
+                            v-if="errors.servings"
+                            class="text-sm text-destructive"
+                        >
+                            {{ errors.servings[0] }}
+                        </p>
                     </div>
                 </div>
 
@@ -269,7 +407,7 @@ async function save() {
                     <Label>Cuisine</Label>
                     <div class="flex items-center gap-2">
                         <Select v-model="cuisineId">
-                            <SelectTrigger class="flex-1">
+                            <SelectTrigger class="flex-1" aria-label="Cuisine">
                                 <SelectValue placeholder="Select cuisine" />
                             </SelectTrigger>
                             <SelectContent>
@@ -285,31 +423,63 @@ async function save() {
                         </Select>
                         <Popover v-model:open="showCuisineCreate">
                             <PopoverTrigger as-child>
-                                <Button type="button" variant="outline" size="sm">
-                                    <Plus class="h-3.5 w-3.5 mr-1" />
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                >
+                                    <Plus class="mr-1 h-3.5 w-3.5" />
                                     New
                                 </Button>
                             </PopoverTrigger>
                             <PopoverContent class="w-64 p-3">
-                                <form @submit.prevent="createCuisine" class="flex flex-col gap-2">
+                                <form
+                                    @submit.prevent="createCuisine"
+                                    class="flex flex-col gap-2"
+                                >
                                     <Label class="text-sm">New Cuisine</Label>
-                                    <Input v-model="newCuisineName" placeholder="e.g. Turkish" class="h-8 text-sm" />
-                                    <Button type="submit" size="sm" :disabled="isCreatingCuisine || !newCuisineName.trim()">
-                                        {{ isCreatingCuisine ? 'Adding...' : 'Add' }}
+                                    <Input
+                                        v-model="newCuisineName"
+                                        placeholder="e.g. Turkish"
+                                        class="h-8 text-sm"
+                                    />
+                                    <Button
+                                        type="submit"
+                                        size="sm"
+                                        :disabled="
+                                            isCreatingCuisine ||
+                                            !newCuisineName.trim()
+                                        "
+                                    >
+                                        {{
+                                            isCreatingCuisine
+                                                ? 'Adding...'
+                                                : 'Add'
+                                        }}
                                     </Button>
                                 </form>
                             </PopoverContent>
                         </Popover>
                     </div>
-                    <p v-if="errors.cuisine_id" class="text-sm text-destructive">{{ errors.cuisine_id[0] }}</p>
+                    <p
+                        v-if="errors.cuisine_id"
+                        class="text-sm text-destructive"
+                    >
+                        {{ errors.cuisine_id[0] }}
+                    </p>
                 </div>
 
                 <!-- Ingredients -->
                 <div class="space-y-3">
                     <div class="flex items-center justify-between">
                         <Label>Ingredients</Label>
-                        <Button type="button" variant="outline" size="sm" @click="addIngredient">
-                            <Plus class="h-3.5 w-3.5 mr-1" />
+                        <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            @click="addIngredient"
+                        >
+                            <Plus class="mr-1 h-3.5 w-3.5" />
                             Add
                         </Button>
                     </div>
@@ -318,55 +488,77 @@ async function save() {
                         :key="index"
                         class="flex items-start gap-2"
                     >
-                        <div class="flex-1 grid grid-cols-4 gap-1.5">
+                        <div class="grid flex-1 grid-cols-4 gap-1.5">
                             <Input
                                 v-model="ingredient.name"
+                                aria-label="Ingredient name"
                                 placeholder="Name"
                                 class="col-span-2 h-8 text-sm"
                                 required
                             />
                             <Input
                                 v-model="ingredient.quantity"
+                                aria-label="Quantity"
                                 placeholder="Qty"
                                 class="h-8 text-sm"
                             />
                             <Input
                                 v-model="ingredient.unit"
+                                aria-label="Unit"
                                 placeholder="Unit"
                                 class="h-8 text-sm"
                             />
                         </div>
-                        <Button
+                        <Button aria-label="Delete ingredient"
                             type="button"
                             variant="ghost"
                             size="icon"
-                            class="h-8 w-8 shrink-0 text-destructive"
+                            class="h-8 w-8 shrink-0 text-muted-foreground hover:text-destructive"
                             :disabled="ingredients.length <= 1"
                             @click="removeIngredient(index)"
                         >
                             <Trash2 class="h-3.5 w-3.5" />
                         </Button>
                     </div>
-                    <p v-if="errors.ingredients" class="text-sm text-destructive">{{ errors.ingredients[0] }}</p>
+                    <p
+                        v-if="errors.ingredients"
+                        class="text-sm text-destructive"
+                    >
+                        {{ errors.ingredients[0] }}
+                    </p>
                 </div>
 
                 <!-- Instructions -->
                 <div class="space-y-2">
                     <Label for="recipe-instructions">Instructions</Label>
-                    <Textarea id="recipe-instructions" v-model="instructions" placeholder="Step-by-step instructions..." rows="6" required />
-                    <p v-if="errors.instructions" class="text-sm text-destructive">{{ errors.instructions[0] }}</p>
+                    <Textarea
+                        id="recipe-instructions"
+                        v-model="instructions"
+                        placeholder="Step-by-step instructions..."
+                        rows="6"
+                        required
+                    />
+                    <p
+                        v-if="errors.instructions"
+                        class="text-sm text-destructive"
+                    >
+                        {{ errors.instructions[0] }}
+                    </p>
                 </div>
 
                 <!-- Tags -->
                 <div class="space-y-2">
                     <Label>Tags</Label>
                     <!-- Selected tags chips -->
-                    <div v-if="selectedTags.length > 0" class="flex flex-wrap gap-1.5">
+                    <div
+                        v-if="selectedTags.length > 0"
+                        class="flex flex-wrap gap-1.5"
+                    >
                         <Badge
                             v-for="tag in selectedTags"
                             :key="tag.id"
                             variant="secondary"
-                            class="gap-1 cursor-pointer"
+                            class="cursor-pointer gap-1"
                             @click="removeTag(tag.id)"
                         >
                             {{ tag.name }}
@@ -377,12 +569,16 @@ async function save() {
                     <Popover>
                         <PopoverTrigger as-child>
                             <Button type="button" variant="outline" size="sm">
-                                <Plus class="h-3.5 w-3.5 mr-1" />
-                                {{ selectedTagIds.length > 0 ? 'Edit tags' : 'Add tags' }}
+                                <Plus class="mr-1 h-3.5 w-3.5" />
+                                {{
+                                    selectedTagIds.length > 0
+                                        ? 'Edit tags'
+                                        : 'Add tags'
+                                }}
                             </Button>
                         </PopoverTrigger>
                         <PopoverContent class="w-64 p-3">
-                            <div class="space-y-3 max-h-48 overflow-y-auto">
+                            <div class="max-h-48 space-y-3 overflow-y-auto">
                                 <div
                                     v-for="tag in allTags"
                                     :key="tag.id"
@@ -390,56 +586,126 @@ async function save() {
                                 >
                                     <Checkbox
                                         :id="`tag-${tag.id}`"
-                                        :model-value="selectedTagIds.includes(tag.id)"
+                                        :model-value="
+                                            selectedTagIds.includes(tag.id)
+                                        "
                                         @update:model-value="toggleTag(tag.id)"
                                     />
-                                    <label :for="`tag-${tag.id}`" class="text-sm cursor-pointer">{{ tag.name }}</label>
+                                    <label
+                                        :for="`tag-${tag.id}`"
+                                        class="cursor-pointer text-sm"
+                                        >{{ tag.name }}</label
+                                    >
                                 </div>
                             </div>
-                            <div class="border-t mt-3 pt-3">
-                                <form v-if="showTagCreate" @submit.prevent="createTag" class="flex flex-col gap-2">
-                                    <Input v-model="newTagName" placeholder="Tag name" class="h-8 text-sm" />
+                            <div class="mt-3 border-t pt-3">
+                                <form
+                                    v-if="showTagCreate"
+                                    @submit.prevent="createTag"
+                                    class="flex flex-col gap-2"
+                                >
+                                    <Input
+                                        v-model="newTagName"
+                                        placeholder="Tag name"
+                                        class="h-8 text-sm"
+                                    />
                                     <div class="flex gap-2">
-                                        <Button type="submit" size="sm" class="flex-1" :disabled="isCreatingTag || !newTagName.trim()">
-                                            {{ isCreatingTag ? 'Adding...' : 'Add' }}
+                                        <Button
+                                            type="submit"
+                                            size="sm"
+                                            class="flex-1"
+                                            :disabled="
+                                                isCreatingTag ||
+                                                !newTagName.trim()
+                                            "
+                                        >
+                                            {{
+                                                isCreatingTag
+                                                    ? 'Adding...'
+                                                    : 'Add'
+                                            }}
                                         </Button>
-                                        <Button type="button" variant="outline" size="sm" @click="showTagCreate = false">Cancel</Button>
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            size="sm"
+                                            @click="showTagCreate = false"
+                                            >Cancel</Button
+                                        >
                                     </div>
                                 </form>
-                                <Button v-else type="button" variant="ghost" size="sm" class="w-full" @click="showTagCreate = true">
-                                    <Plus class="h-3.5 w-3.5 mr-1" />
+                                <Button
+                                    v-else
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    class="w-full"
+                                    @click="showTagCreate = true"
+                                >
+                                    <Plus class="mr-1 h-3.5 w-3.5" />
                                     Add new tag
                                 </Button>
                             </div>
                         </PopoverContent>
                     </Popover>
-                    <p v-if="errors.tag_ids" class="text-sm text-destructive">{{ errors.tag_ids[0] }}</p>
+                    <p v-if="errors.tag_ids" class="text-sm text-destructive">
+                        {{ errors.tag_ids[0] }}
+                    </p>
                 </div>
 
                 <!-- Source URL & Image URL -->
                 <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <div class="space-y-2">
                         <Label for="recipe-source">Source URL</Label>
-                        <Input id="recipe-source" v-model="sourceUrl" placeholder="https://..." />
-                        <p v-if="errors.source_url" class="text-sm text-destructive">{{ errors.source_url[0] }}</p>
+                        <Input
+                            id="recipe-source"
+                            v-model="sourceUrl"
+                            placeholder="https://..."
+                        />
+                        <p
+                            v-if="errors.source_url"
+                            class="text-sm text-destructive"
+                        >
+                            {{ errors.source_url[0] }}
+                        </p>
                     </div>
                     <div class="space-y-2">
                         <Label for="recipe-image">Image URL</Label>
-                        <Input id="recipe-image" v-model="imageUrl" placeholder="https://..." />
-                        <p v-if="errors.image_url" class="text-sm text-destructive">{{ errors.image_url[0] }}</p>
+                        <Input
+                            id="recipe-image"
+                            v-model="imageUrl"
+                            placeholder="https://..."
+                        />
+                        <p
+                            v-if="errors.image_url"
+                            class="text-sm text-destructive"
+                        >
+                            {{ errors.image_url[0] }}
+                        </p>
                     </div>
                 </div>
 
                 <!-- Notes -->
                 <div class="space-y-2">
                     <Label for="recipe-notes">Notes</Label>
-                    <Textarea id="recipe-notes" v-model="notes" placeholder="Personal notes..." rows="3" />
-                    <p v-if="errors.notes" class="text-sm text-destructive">{{ errors.notes[0] }}</p>
+                    <Textarea
+                        id="recipe-notes"
+                        v-model="notes"
+                        placeholder="Personal notes..."
+                        rows="3"
+                    />
+                    <p v-if="errors.notes" class="text-sm text-destructive">
+                        {{ errors.notes[0] }}
+                    </p>
                 </div>
 
                 <!-- Actions -->
                 <div class="flex gap-3">
-                    <Button type="button" variant="outline" @click="router.visit('/recipes')">
+                    <Button
+                        type="button"
+                        variant="outline"
+                        @click="router.visit('/recipes')"
+                    >
                         Cancel
                     </Button>
                     <Button type="submit" :disabled="isSaving">

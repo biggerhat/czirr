@@ -1,6 +1,24 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3';
-import { BookUser, CalendarDays, ClipboardList, CookingPot, Dices, LayoutGrid, ListChecks, Trophy, UtensilsCrossed, Users, Wallet } from 'lucide-vue-next';
+import {
+    BookUser,
+    CalendarDays,
+    ClipboardList,
+    CookingPot,
+    Dices,
+    Gamepad2,
+    Gift,
+    LayoutGrid,
+    MessagesSquare,
+    PiggyBank,
+    Sun,
+    ListChecks,
+    Refrigerator,
+    Trophy,
+    UtensilsCrossed,
+    Users,
+    Wallet,
+} from 'lucide-vue-next';
 import { computed } from 'vue';
 import NavFooter from '@/components/NavFooter.vue';
 import NavMain from '@/components/NavMain.vue';
@@ -21,71 +39,135 @@ import AppLogo from './AppLogo.vue';
 
 const { can } = usePermissions();
 
-type NavItemWithPermission = NavItem & { permission?: string };
+type NavItemWithPermission = NavItem & { permission?: string; group: string };
+
+const groupOrder = ['Home', 'Food', 'Chores & fun', 'Family'];
 
 const allNavItems: NavItemWithPermission[] = [
     {
         title: 'Dashboard',
         href: '/',
         icon: LayoutGrid,
+        group: 'Home',
     },
     {
         title: 'Calendar',
         href: calendarIndex(),
         icon: CalendarDays,
+        group: 'Home',
+    },
+    {
+        title: 'Board',
+        href: '/board',
+        icon: MessagesSquare,
+        permission: 'lists.view',
+        group: 'Home',
+    },
+    {
+        title: 'My Day',
+        href: '/my-day',
+        icon: Sun,
+        permission: 'chores.view',
+        group: 'Home',
     },
     {
         title: 'Lists',
         href: '/lists',
         icon: ListChecks,
+        group: 'Food',
     },
     {
         title: 'Recipes',
         href: '/recipes',
         icon: CookingPot,
+        group: 'Food',
     },
     {
         title: 'Meal Plans',
         href: '/meal-plans',
         icon: UtensilsCrossed,
+        group: 'Food',
+    },
+    {
+        title: 'Pantry',
+        href: '/pantry',
+        icon: Refrigerator,
+        permission: 'meal-plans.view',
+        group: 'Food',
     },
     {
         title: 'Chores',
         href: '/chores',
         icon: ClipboardList,
+        group: 'Chores & fun',
     },
     {
         title: 'Scoreboard',
         href: '/scoreboard',
         icon: Trophy,
         permission: 'chores.view',
+        group: 'Chores & fun',
     },
     {
-        title: 'Contacts',
-        href: '/contacts',
-        icon: BookUser,
+        title: 'Savings',
+        href: '/savings',
+        icon: PiggyBank,
+        permission: 'chores.view',
+        group: 'Chores & fun',
+    },
+    {
+        title: 'Rewards',
+        href: '/rewards',
+        icon: Gift,
+        permission: 'chores.view',
+        group: 'Chores & fun',
     },
     {
         title: 'Yahtzee',
         href: '/yahtzee',
         icon: Dices,
+        group: 'Chores & fun',
+    },
+    {
+        title: 'Game night',
+        href: '/games',
+        icon: Gamepad2,
+        permission: 'lists.view',
+        group: 'Chores & fun',
+    },
+    {
+        title: 'Contacts',
+        href: '/contacts',
+        icon: BookUser,
+        group: 'Family',
     },
     {
         title: 'Budget',
         href: '/budgeting',
         icon: Wallet,
         permission: 'budgeting.view',
+        group: 'Family',
     },
     {
         title: 'Family',
         href: '/family',
         icon: Users,
         permission: 'family.view',
+        group: 'Family',
     },
 ];
 
-const mainNavItems = computed(() =>
-    allNavItems.filter(item => !item.permission || can(item.permission)),
+const navGroups = computed(() =>
+    groupOrder
+        .map((label) => ({
+            label,
+            items: allNavItems.filter(
+                (item) =>
+                    item.group === label &&
+                    (!item.permission || can(item.permission)),
+            ),
+        }))
+        .filter((g) => g.items.length > 0),
 );
 
 const footerNavItems: NavItem[] = [
@@ -103,7 +185,7 @@ const footerNavItems: NavItem[] = [
 </script>
 
 <template>
-    <Sidebar collapsible="icon" variant="inset">
+    <Sidebar collapsible="icon" variant="inset" role="complementary" aria-label="Sidebar">
         <SidebarHeader>
             <SidebarMenu>
                 <SidebarMenuItem>
@@ -117,7 +199,12 @@ const footerNavItems: NavItem[] = [
         </SidebarHeader>
 
         <SidebarContent>
-            <NavMain :items="mainNavItems" />
+            <NavMain
+                v-for="g in navGroups"
+                :key="g.label"
+                :label="g.label"
+                :items="g.items"
+            />
         </SidebarContent>
 
         <SidebarFooter>

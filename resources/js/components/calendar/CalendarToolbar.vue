@@ -45,10 +45,10 @@ const views: { label: string; value: CalendarView }[] = [
         <!-- Top row: nav + title + desktop actions -->
         <div class="flex items-center justify-between gap-2">
             <div class="flex items-center gap-2">
-                <Button variant="outline" size="icon" @click="$emit('prev')">
+                <Button aria-label="Previous" variant="outline" size="icon" @click="$emit('prev')">
                     <ChevronLeft class="h-4 w-4" />
                 </Button>
-                <Button variant="outline" size="icon" @click="$emit('next')">
+                <Button aria-label="Next" variant="outline" size="icon" @click="$emit('next')">
                     <ChevronRight class="h-4 w-4" />
                 </Button>
                 <Button variant="outline" size="sm" @click="$emit('today')">
@@ -75,7 +75,7 @@ const views: { label: string; value: CalendarView }[] = [
                 </div>
                 <DropdownMenu>
                     <DropdownMenuTrigger as-child>
-                        <Button variant="outline" size="icon" class="relative">
+                        <Button variant="outline" size="icon" class="relative" aria-label="Filter calendars">
                             <Filter class="h-4 w-4" />
                             <span
                                 v-if="hasActiveFilter"

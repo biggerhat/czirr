@@ -94,6 +94,8 @@ export const PLAYER_COLORS: Record<EventColor, PlayerColorClasses> = {
     },
 };
 
-export function playerColorClasses(color: EventColor | undefined): PlayerColorClasses {
+export function playerColorClasses(
+    color: EventColor | undefined,
+): PlayerColorClasses {
     return PLAYER_COLORS[color ?? 'blue'] ?? PLAYER_COLORS.blue;
 }

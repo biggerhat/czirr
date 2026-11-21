@@ -27,6 +27,7 @@ export type Chore = {
     description: string | null;
     is_active: boolean;
     points: number;
+    requires_approval?: boolean;
     assignments: ChoreAssignment[];
 };
 
@@ -36,6 +37,16 @@ export type ChoreCompletion = {
     family_member_id: number;
     completed_date: string;
     points_earned: number;
+    status?: 'pending' | 'approved';
+};
+
+export type PendingApproval = {
+    id: number;
+    chore: string;
+    member: string;
+    color: FamilyMember['color'];
+    date: string;
+    points: number;
 };
 
 export type BonusObjective = {

@@ -141,11 +141,11 @@ async function removeRecipe(recipe: Recipe) {
                         <div class="flex-1 min-w-0">
                             <RecipeCard :recipe="recipe" />
                         </div>
-                        <Button
+                        <Button aria-label="Delete recipe"
                             v-if="can.edit"
-                            variant="outline"
+                            variant="ghost"
                             size="icon"
-                            class="h-8 w-8 shrink-0 text-destructive"
+                            class="h-8 w-8 shrink-0 text-muted-foreground hover:text-destructive"
                             @click.prevent="removeRecipe(recipe)"
                         >
                             <Trash2 class="h-3.5 w-3.5" />

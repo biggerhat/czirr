@@ -6,6 +6,10 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
+/**
+ * @property array<int, array{value: int, held: bool}> $dice
+ * @property array<int|string, array<string, int|null>> $scorecards
+ */
 class YahtzeeGame extends Model
 {
     use HasFactory;

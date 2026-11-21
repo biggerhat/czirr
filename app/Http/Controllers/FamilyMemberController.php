@@ -144,6 +144,8 @@ class FamilyMemberController extends Controller
             ],
         ]);
 
+        $this->guardAdminMember($request, $familyMember, $validated);
+
         $oldRole = $familyMember->role?->value;
         $familyMember->update($validated);
 
@@ -173,6 +175,8 @@ class FamilyMemberController extends Controller
             return response()->json(['message' => 'You cannot remove your own family member entry.'], 422);
         }
 
+        $this->guardAdminMember($request, $familyMember);
+
         $familyMember->delete();
 
         return response()->json(null, 204);
@@ -191,10 +195,37 @@ class FamilyMemberController extends Controller
         ]);
 
         $linkedUser = User::findOrFail($familyMember->linked_user_id);
+
+        if ($linkedUser->hasRole('admin') && $validated['role'] !== 'admin'
+            && User::role('admin')->count() <= 1) {
+            return response()->json(['message' => 'There must always be at least one admin.'], 422);
+        }
+
         $linkedUser->syncRoles([$validated['role']]);
 
         return response()->json([
             'spatie_role' => $validated['role'],
         ]);
+    }
+
+    /**
+     * Admins can only be modified by someone who can manage roles. Without this
+     * a parent (family.edit) could demote the admin or detach their account.
+     *
+     * @param  array<string, mixed>|null  $changes  validated update payload, if any
+     */
+    private function guardAdminMember(Request $request, FamilyMember $member, ?array $changes = null): void
+    {
+        $linked = $member->linked_user_id ? User::find($member->linked_user_id) : null;
+
+        if (! $linked || ! $linked->hasRole('admin') || $request->user()->can('roles.manage')) {
+            return;
+        }
+
+        $touchesIdentity = $changes === null
+            || ($changes['role'] ?? null) !== $member->role->value
+            || ($changes['linked_user_id'] ?? null) !== $member->linked_user_id;
+
+        abort_if($touchesIdentity, 403, 'Only an admin can change or remove an admin.');
     }
 }

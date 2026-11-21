@@ -84,7 +84,7 @@ async function confirmDelete() {
         <div class="flex h-full flex-1 flex-col gap-4 p-4">
             <!-- Header -->
             <div class="flex items-center justify-between">
-                <h2 class="text-lg font-semibold">Cookbooks</h2>
+                <h1 class="text-xl font-semibold tracking-tight">Cookbooks</h1>
                 <Button v-if="can.create" size="sm" @click="openCreate">
                     <Plus class="h-4 w-4 mr-1" />
                     New Cookbook
@@ -107,10 +107,10 @@ async function confirmDelete() {
                     <div class="flex items-start justify-between gap-2">
                         <span class="font-medium truncate">{{ cookbook.name }}</span>
                         <div v-if="can.edit || can.delete" class="flex items-center gap-1 shrink-0">
-                            <Button v-if="can.edit" variant="outline" size="icon" class="h-8 w-8" @click.prevent="openEdit(cookbook)">
+                            <Button aria-label="Edit" v-if="can.edit" variant="ghost" size="icon" class="h-8 w-8" @click.prevent="openEdit(cookbook)">
                                 <Pencil class="h-3.5 w-3.5" />
                             </Button>
-                            <Button v-if="can.delete" variant="outline" size="icon" class="h-8 w-8 text-destructive" @click.prevent="openDelete(cookbook)">
+                            <Button aria-label="Delete" v-if="can.delete" variant="ghost" size="icon" class="h-8 w-8 text-muted-foreground hover:text-destructive" @click.prevent="openDelete(cookbook)">
                                 <Trash2 class="h-3.5 w-3.5" />
                             </Button>
                         </div>

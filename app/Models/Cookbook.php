@@ -3,14 +3,18 @@
 namespace App\Models;
 
 use App\Enums\ListVisibility;
+use App\Models\Concerns\HasFamilyVisibility;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
+/**
+ * @property ListVisibility $visibility
+ */
 class Cookbook extends Model
 {
-    use HasFactory;
+    use HasFactory, HasFamilyVisibility;
 
     protected $fillable = [
         'name',

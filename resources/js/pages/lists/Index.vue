@@ -99,7 +99,7 @@ async function togglePin(list: FamilyList) {
         <div class="flex h-full flex-1 flex-col gap-4 p-4">
             <!-- Header -->
             <div class="flex items-center justify-between">
-                <h2 class="text-lg font-semibold">Lists</h2>
+                <h1 class="text-xl font-semibold tracking-tight">Lists</h1>
                 <Button size="sm" @click="openCreate">
                     <Plus class="h-4 w-4 mr-1" />
                     New List
@@ -110,7 +110,7 @@ async function togglePin(list: FamilyList) {
             <div v-if="lists.length === 0" class="rounded-lg border border-dashed p-8 text-center">
                 <ClipboardList class="mx-auto mb-2 h-8 w-8 text-muted-foreground/30" />
                 <p class="text-sm text-muted-foreground">No lists yet.</p>
-                <p class="mt-1 text-xs text-muted-foreground/70">Click "New List" to get started.</p>
+                <p class="mt-1 text-xs text-muted-foreground">Click "New List" to get started.</p>
             </div>
 
             <!-- Card grid -->
@@ -130,14 +130,14 @@ async function togglePin(list: FamilyList) {
                             <span class="font-medium truncate">{{ list.name }}</span>
                         </div>
                         <div class="flex items-center gap-1 shrink-0">
-                            <Button variant="outline" size="icon" class="h-8 w-8" :title="list.is_pinned ? 'Unpin from dashboard' : 'Pin to dashboard'" @click.prevent="togglePin(list)">
+                            <Button :aria-label="list.is_pinned ? 'Unpin from dashboard' : 'Pin to dashboard'" variant="ghost" size="icon" class="h-8 w-8" :title="list.is_pinned ? 'Unpin from dashboard' : 'Pin to dashboard'" @click.prevent="togglePin(list)">
                                 <Pin v-if="!list.is_pinned" class="h-3.5 w-3.5" />
                                 <PinOff v-else class="h-3.5 w-3.5" />
                             </Button>
-                            <Button variant="outline" size="icon" class="h-8 w-8" @click.prevent="openEdit(list)">
+                            <Button aria-label="Edit" variant="ghost" size="icon" class="h-8 w-8" @click.prevent="openEdit(list)">
                                 <Pencil class="h-3.5 w-3.5" />
                             </Button>
-                            <Button variant="outline" size="icon" class="h-8 w-8 text-destructive" @click.prevent="openDelete(list)">
+                            <Button aria-label="Delete" variant="ghost" size="icon" class="h-8 w-8 text-muted-foreground hover:text-destructive" @click.prevent="openDelete(list)">
                                 <Trash2 class="h-3.5 w-3.5" />
                             </Button>
                         </div>
@@ -163,7 +163,7 @@ async function togglePin(list: FamilyList) {
                                 {{ item.name }}<span v-if="item.quantity"> ({{ item.quantity }})</span>
                             </span>
                         </li>
-                        <li v-if="(list.items_count ?? 0) > list.items.length" class="text-xs text-muted-foreground/70">
+                        <li v-if="(list.items_count ?? 0) > list.items.length" class="text-xs text-muted-foreground">
                             +{{ (list.items_count ?? 0) - list.items.length }} more
                         </li>
                     </ul>

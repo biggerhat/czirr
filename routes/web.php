@@ -1,10 +1,12 @@
 <?php
 
 use App\Http\Controllers\BillController;
+use App\Http\Controllers\BoardController;
 use App\Http\Controllers\BonusObjectiveController;
 use App\Http\Controllers\BudgetCategoryController;
 use App\Http\Controllers\BudgetController;
 use App\Http\Controllers\CalendarController;
+use App\Http\Controllers\CalendarFeedController;
 use App\Http\Controllers\ChoreAssignmentController;
 use App\Http\Controllers\ChoreCompletionController;
 use App\Http\Controllers\ChoreController;
@@ -15,18 +17,38 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EventController;
 use App\Http\Controllers\EventTypeController;
 use App\Http\Controllers\ExpenseController;
+use App\Http\Controllers\ExpenseImportController;
+use App\Http\Controllers\FamilyInviteController;
 use App\Http\Controllers\FamilyListController;
 use App\Http\Controllers\FamilyListItemController;
 use App\Http\Controllers\FamilyMemberController;
+use App\Http\Controllers\GridGameController;
 use App\Http\Controllers\IncomeController;
 use App\Http\Controllers\MealPlanController;
+use App\Http\Controllers\MyDayController;
+use App\Http\Controllers\PantryController;
 use App\Http\Controllers\RecipeController;
+use App\Http\Controllers\RecipeImportController;
+use App\Http\Controllers\RecipeRatingController;
 use App\Http\Controllers\RecipeTagController;
+use App\Http\Controllers\RewardController;
 use App\Http\Controllers\RoleController;
+use App\Http\Controllers\SavingsController;
 use App\Http\Controllers\ScoreboardController;
+use App\Http\Controllers\ScoreGameController;
 use App\Http\Controllers\YahtzeeGameController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
+
+Route::get('calendar/feed/{token}.ics', [CalendarFeedController::class, 'show'])
+    ->where('token', '[A-Za-z0-9]{32,64}')
+    ->middleware('throttle:60,1')
+    ->name('calendar.feed');
+
+Route::get('invite/{token}', [FamilyInviteController::class, 'show'])
+    ->where('token', '[A-Za-z0-9]{48}')->middleware('throttle:30,1')->name('invite.show');
+Route::post('invite/{token}/accept', [FamilyInviteController::class, 'accept'])
+    ->where('token', '[A-Za-z0-9]{48}')->middleware(['auth', 'throttle:10,1'])->name('invite.accept');
 
 Route::get('/offline', fn () => view('offline'));
 
@@ -43,7 +65,7 @@ Route::get('/', function () {
 Route::get('/dashboard', [DashboardController::class, 'index'])
     ->middleware(['auth', 'verified', 'family'])->name('dashboard');
 
-Route::middleware(['auth', 'verified', 'family'])->group(function () {
+Route::middleware(['auth', 'verified', 'family', 'throttle:family'])->group(function () {
     // Calendar (no specific permission — all authenticated family members can view)
     Route::get('calendar', [CalendarController::class, 'index'])->name('calendar.index');
 
@@ -70,8 +92,17 @@ Route::middleware(['auth', 'verified', 'family'])->group(function () {
     Route::patch('list-items/{familyListItem}/toggle', [FamilyListItemController::class, 'toggleComplete'])->middleware('permission:lists.edit');
     Route::delete('list-items/{familyListItem}', [FamilyListItemController::class, 'destroy'])->middleware('permission:lists.delete');
 
+    // Family board
+    Route::get('board', [BoardController::class, 'index'])->middleware('permission:lists.view')->name('board.index');
+    Route::post('board', [BoardController::class, 'store'])->middleware(['permission:lists.create', 'throttle:20,1'])->name('board.store');
+    Route::patch('board/{post}/pin', [BoardController::class, 'togglePin'])->middleware('permission:family.edit')->name('board.pin');
+    Route::delete('board/{post}', [BoardController::class, 'destroy'])->middleware('permission:lists.view')->name('board.destroy');
+
     // Recipes
     Route::get('recipes', [RecipeController::class, 'index'])->name('recipes.index');
+    Route::post('recipes/import', RecipeImportController::class)->middleware(['permission:recipes.create', 'throttle:20,1'])->name('recipes.import');
+    Route::put('recipes/{recipe}/rating', [RecipeRatingController::class, 'update'])->name('recipes.rating.update');
+    Route::delete('recipes/{recipe}/rating', [RecipeRatingController::class, 'destroy'])->name('recipes.rating.destroy');
     Route::get('recipes/create', [RecipeController::class, 'create'])->middleware('permission:recipes.create')->name('recipes.create');
     Route::get('recipes/{recipe}/edit', [RecipeController::class, 'edit'])->middleware('permission:recipes.edit')->name('recipes.edit');
     Route::get('recipes/{recipe}', [RecipeController::class, 'show'])->name('recipes.show');
@@ -101,7 +132,14 @@ Route::middleware(['auth', 'verified', 'family'])->group(function () {
     Route::post('meal-plan-entries', [MealPlanController::class, 'store'])->middleware('permission:meal-plans.create');
     Route::put('meal-plan-entries/{mealPlanEntry}', [MealPlanController::class, 'update'])->middleware('permission:meal-plans.edit');
     Route::delete('meal-plan-entries/{mealPlanEntry}', [MealPlanController::class, 'destroy'])->middleware('permission:meal-plans.delete');
+    Route::get('meal-plans/suggestions', [MealPlanController::class, 'suggestions'])->middleware('permission:meal-plans.view')->name('meal-plans.suggestions');
+    Route::post('meal-plans/copy-previous-week', [MealPlanController::class, 'copyPreviousWeek'])->middleware('permission:meal-plans.create')->name('meal-plans.copy-week');
     Route::post('meal-plans/generate-grocery-list', [MealPlanController::class, 'generateGroceryList'])->middleware('permission:meal-plans.generate-grocery-list');
+
+    // Pantry staples (skipped when generating grocery lists)
+    Route::get('pantry', [PantryController::class, 'index'])->middleware('permission:meal-plans.view')->name('pantry.index');
+    Route::post('pantry', [PantryController::class, 'store'])->middleware('permission:meal-plans.edit')->name('pantry.store');
+    Route::delete('pantry/{pantryItem}', [PantryController::class, 'destroy'])->middleware('permission:meal-plans.edit')->name('pantry.destroy');
 
     // Chores
     Route::get('chores', [ChoreController::class, 'index'])->name('chores.index');
@@ -110,6 +148,7 @@ Route::middleware(['auth', 'verified', 'family'])->group(function () {
     Route::delete('chores/{chore}', [ChoreController::class, 'destroy'])->middleware('permission:chores.delete');
     Route::post('chore-assignments/toggle', [ChoreAssignmentController::class, 'toggle'])->middleware('permission:chores.assign');
     Route::post('chore-completions/toggle', [ChoreCompletionController::class, 'toggle'])->middleware('permission:chores.view');
+    Route::patch('chore-completions/{completion}', [ChoreCompletionController::class, 'resolve'])->middleware('permission:chores.edit')->name('chore-completions.resolve');
 
     // Bonus Objectives
     Route::post('bonus-objectives', [BonusObjectiveController::class, 'store'])->middleware('permission:chores.create');
@@ -117,7 +156,22 @@ Route::middleware(['auth', 'verified', 'family'])->group(function () {
     Route::delete('bonus-objectives/{bonusObjective}', [BonusObjectiveController::class, 'destroy'])->middleware('permission:chores.delete');
     Route::post('bonus-objectives/{bonusObjective}/claim', [BonusObjectiveController::class, 'claim'])->middleware('permission:chores.view');
 
+    // Savings ("kid bank"): everyone with chores.view sees their own; family.edit manages
+    Route::get('savings', [SavingsController::class, 'index'])->middleware('permission:chores.view')->name('savings.index');
+    Route::post('savings', [SavingsController::class, 'store'])->middleware(['permission:family.edit', 'throttle:60,1'])->name('savings.store');
+    Route::delete('savings/{entry}', [SavingsController::class, 'destroy'])->middleware('permission:family.edit')->name('savings.destroy');
+
     // Scoreboard
+    Route::get('my-day', [MyDayController::class, 'index'])->middleware('permission:chores.view')->name('my-day.index');
+
+    // Rewards
+    Route::get('rewards', [RewardController::class, 'index'])->middleware('permission:chores.view')->name('rewards.index');
+    Route::post('rewards', [RewardController::class, 'store'])->middleware('permission:chores.edit')->name('rewards.store');
+    Route::put('rewards/{reward}', [RewardController::class, 'update'])->middleware('permission:chores.edit')->name('rewards.update');
+    Route::delete('rewards/{reward}', [RewardController::class, 'destroy'])->middleware('permission:chores.edit')->name('rewards.destroy');
+    Route::post('rewards/{reward}/redeem', [RewardController::class, 'redeem'])->middleware('permission:chores.view')->name('rewards.redeem');
+    Route::patch('reward-redemptions/{redemption}', [RewardController::class, 'resolve'])->middleware('permission:chores.edit')->name('rewards.resolve');
+
     Route::get('scoreboard', [ScoreboardController::class, 'index'])->middleware('permission:chores.view')->name('scoreboard.index');
 
     // Yahtzee
@@ -128,6 +182,22 @@ Route::middleware(['auth', 'verified', 'family'])->group(function () {
     Route::patch('yahtzee/{yahtzeeGame}/hold', [YahtzeeGameController::class, 'hold'])->name('yahtzee.hold');
     Route::post('yahtzee/{yahtzeeGame}/score', [YahtzeeGameController::class, 'score'])->name('yahtzee.score');
     Route::delete('yahtzee/{yahtzeeGame}', [YahtzeeGameController::class, 'destroy'])->name('yahtzee.destroy');
+
+    // Game night (generic scorekeeper + Farkle)
+    Route::get('games/duels', [GridGameController::class, 'index'])->middleware('permission:lists.view')->name('duels.index');
+    Route::post('games/duels', [GridGameController::class, 'store'])->middleware(['permission:lists.create', 'throttle:60,1'])->name('duels.store');
+    Route::get('games/duels/{gridGame}', [GridGameController::class, 'show'])->middleware('permission:lists.view')->name('duels.show');
+    Route::post('games/duels/{gridGame}/move', [GridGameController::class, 'move'])->middleware('permission:lists.create')->name('duels.move');
+    Route::delete('games/duels/{gridGame}', [GridGameController::class, 'destroy'])->middleware('permission:lists.delete')->name('duels.destroy');
+    Route::get('games/memory', fn () => \Inertia\Inertia::render('games/Memory'))->middleware('permission:lists.view')->name('games.memory');
+
+    Route::get('games', [ScoreGameController::class, 'index'])->middleware('permission:lists.view')->name('games.index');
+    Route::post('games', [ScoreGameController::class, 'store'])->middleware(['permission:lists.create', 'throttle:60,1'])->name('games.store');
+    Route::get('games/{scoreGame}', [ScoreGameController::class, 'show'])->middleware('permission:lists.view')->name('games.show');
+    Route::post('games/{scoreGame}/rounds', [ScoreGameController::class, 'addRound'])->middleware('permission:lists.create')->name('games.rounds.store');
+    Route::delete('games/{scoreGame}/rounds', [ScoreGameController::class, 'undoRound'])->middleware('permission:lists.create')->name('games.rounds.undo');
+    Route::post('games/{scoreGame}/finish', [ScoreGameController::class, 'finish'])->middleware('permission:lists.create')->name('games.finish');
+    Route::delete('games/{scoreGame}', [ScoreGameController::class, 'destroy'])->middleware('permission:lists.delete')->name('games.destroy');
 
     // Contacts
     Route::get('contacts', [ContactController::class, 'index'])->name('contacts.index');
@@ -142,6 +212,7 @@ Route::middleware(['auth', 'verified', 'family'])->group(function () {
     Route::put('bills/{bill}', [BillController::class, 'update'])->middleware('permission:budgeting.edit');
     Route::delete('bills/{bill}', [BillController::class, 'destroy'])->middleware('permission:budgeting.delete');
 
+    Route::post('expenses/import', ExpenseImportController::class)->middleware(['permission:budgeting.create', 'throttle:10,1'])->name('expenses.import');
     Route::post('expenses', [ExpenseController::class, 'store'])->middleware('permission:budgeting.create');
     Route::delete('expenses/{expense}', [ExpenseController::class, 'destroy'])->middleware('permission:budgeting.delete');
 
@@ -155,6 +226,7 @@ Route::middleware(['auth', 'verified', 'family'])->group(function () {
 
     // Family
     Route::get('family', [FamilyMemberController::class, 'index'])->middleware('permission:family.view')->name('family.index');
+    Route::post('family/invites', [FamilyInviteController::class, 'store'])->middleware('permission:family.create')->name('invite.store');
     Route::post('family', [FamilyMemberController::class, 'store'])->middleware('permission:family.create');
     Route::put('family/{familyMember}', [FamilyMemberController::class, 'update'])->middleware('permission:family.edit');
     Route::delete('family/{familyMember}', [FamilyMemberController::class, 'destroy'])->middleware('permission:family.delete');

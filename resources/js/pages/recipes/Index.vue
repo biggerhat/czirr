@@ -71,7 +71,7 @@ const sortBy = ref<SortOption>('updated');
 const groupBy = ref<GroupOption>('none');
 
 const SORT_LABELS: Record<SortOption, string> = {
-    updated: 'Recently Updated',
+    updated: 'Recent',
     name: 'Name',
     difficulty: 'Difficulty',
     total_time: 'Total Time',
@@ -206,7 +206,7 @@ async function confirmDelete() {
         <div class="flex h-full flex-1 flex-col gap-4 p-4">
             <!-- Header -->
             <div class="flex items-center justify-between">
-                <h2 class="text-lg font-semibold">Recipes</h2>
+                <h1 class="text-xl font-semibold tracking-tight">Recipes</h1>
                 <div class="flex items-center gap-2">
                     <Link href="/cookbooks">
                         <Button variant="outline" size="sm">
@@ -230,10 +230,10 @@ async function confirmDelete() {
                     <Search class="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                     <Input
                         v-model="searchQuery"
-                        placeholder="Search recipes by name, description, or tag..."
+                        placeholder="Search recipes or tags…"
                         class="pl-9 pr-9"
                     />
-                    <button
+                    <button aria-label="Cancel"
                         v-if="searchQuery"
                         class="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                         @click="searchQuery = ''"
@@ -243,20 +243,25 @@ async function confirmDelete() {
                 </div>
 
                 <!-- Tag filter -->
-                <div v-if="tags.length > 0" class="flex flex-wrap items-center gap-1.5">
-                    <span class="text-sm text-muted-foreground mr-1">Tags</span>
+                <div v-if="tags.length > 0" class="-mx-4 flex flex-nowrap items-center gap-1.5 overflow-x-auto px-4 pb-1 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0 sm:pb-0">
+                    <span class="mr-1 shrink-0 text-sm text-muted-foreground">Tags</span>
                     <Badge
                         v-for="tag in tags"
                         :key="tag.id"
                         :variant="selectedTagIds.has(tag.id) ? 'default' : 'outline'"
-                        class="cursor-pointer text-xs"
+                        class="shrink-0 cursor-pointer text-xs"
+                        role="button"
+                        tabindex="0"
+                        :aria-pressed="selectedTagIds.has(tag.id)"
                         @click="toggleTag(tag.id)"
+                        @keydown.enter.prevent="toggleTag(tag.id)"
+                        @keydown.space.prevent="toggleTag(tag.id)"
                     >
                         {{ tag.name }}
                     </Badge>
                     <button
                         v-if="hasActiveFilters"
-                        class="text-xs text-muted-foreground hover:text-foreground ml-1"
+                        class="ml-1 shrink-0 text-xs text-muted-foreground hover:text-foreground"
                         @click="clearFilters"
                     >
                         Clear filters
@@ -264,11 +269,11 @@ async function confirmDelete() {
                 </div>
 
                 <!-- Sort, Group & count -->
-                <div class="flex flex-col sm:flex-row flex-wrap items-start sm:items-center gap-3">
-                    <div class="flex items-center gap-2 w-full sm:w-auto">
+                <div class="flex flex-row flex-wrap items-center gap-3">
+                    <div class="flex min-w-0 flex-1 items-center gap-2 sm:flex-none">
                         <span class="text-sm text-muted-foreground shrink-0">Sort</span>
                         <Select v-model="sortBy">
-                            <SelectTrigger class="h-8 w-full sm:w-[160px] text-sm">
+                            <SelectTrigger class="h-8 w-full min-w-0 sm:w-[200px] text-sm" aria-label="Sort recipes">
                                 <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
@@ -282,10 +287,10 @@ async function confirmDelete() {
                             </SelectContent>
                         </Select>
                     </div>
-                    <div class="flex items-center gap-2 w-full sm:w-auto">
+                    <div class="flex min-w-0 flex-1 items-center gap-2 sm:flex-none">
                         <span class="text-sm text-muted-foreground shrink-0">Group</span>
                         <Select v-model="groupBy">
-                            <SelectTrigger class="h-8 w-full sm:w-[140px] text-sm">
+                            <SelectTrigger class="h-8 w-full min-w-0 sm:w-[140px] text-sm" aria-label="Group recipes">
                                 <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
@@ -299,7 +304,7 @@ async function confirmDelete() {
                             </SelectContent>
                         </Select>
                     </div>
-                    <span class="text-sm text-muted-foreground ml-auto">
+                    <span class="ml-auto hidden text-sm text-muted-foreground sm:inline">
                         {{ filteredRecipes.length }} {{ filteredRecipes.length === 1 ? 'recipe' : 'recipes' }}
                         <span v-if="filteredRecipes.length !== recipes.length"> of {{ recipes.length }}</span>
                     </span>
@@ -310,14 +315,14 @@ async function confirmDelete() {
             <div v-if="recipes.length === 0" class="rounded-lg border border-dashed p-8 text-center">
                 <CookingPot class="mx-auto mb-2 h-8 w-8 text-muted-foreground/30" />
                 <p class="text-sm text-muted-foreground">No recipes yet.</p>
-                <p v-if="can.create" class="mt-1 text-xs text-muted-foreground/70">Click "New Recipe" to get started.</p>
+                <p v-if="can.create" class="mt-1 text-xs text-muted-foreground">Click "New Recipe" to get started.</p>
             </div>
 
             <!-- No results after filtering -->
             <div v-else-if="filteredRecipes.length === 0" class="rounded-lg border border-dashed p-8 text-center">
                 <Search class="mx-auto mb-2 h-8 w-8 text-muted-foreground/30" />
                 <p class="text-sm text-muted-foreground">No recipes match your filters.</p>
-                <p class="mt-1 text-xs text-muted-foreground/70">
+                <p class="mt-1 text-xs text-muted-foreground">
                     Try a different search or
                     <button class="text-primary hover:underline" @click="clearFilters">clear filters</button>.
                 </p>
@@ -334,19 +339,28 @@ async function confirmDelete() {
                             v-for="recipe in group.recipes"
                             :key="recipe.id"
                             :href="`/recipes/${recipe.id}`"
-                            class="rounded-lg border p-4 hover:border-primary/50 transition-colors"
+                            class="overflow-hidden rounded-lg border hover:border-primary/50 transition-colors"
                         >
-                            <div class="flex items-start justify-between gap-2">
+                            <img
+                                v-if="recipe.image_url && /^https?:\/\//i.test(recipe.image_url)"
+                                :src="recipe.image_url"
+                                :alt="recipe.name"
+                                loading="lazy"
+                                referrerpolicy="no-referrer"
+                                class="h-36 w-full object-cover"
+                                @error="($event.target as HTMLImageElement).style.display = 'none'"
+                            />
+                            <div class="flex items-start p-4 justify-between gap-2">
                                 <div class="flex-1 min-w-0">
                                     <RecipeCard :recipe="recipe" />
                                 </div>
                                 <div v-if="can.edit || can.delete" class="flex items-center gap-1 shrink-0">
-                                    <Link v-if="can.edit" :href="`/recipes/${recipe.id}/edit`" @click.stop>
-                                        <Button variant="outline" size="icon" class="h-8 w-8">
+                                    <Link v-if="can.edit" :href="`/recipes/${recipe.id}/edit`" :aria-label="`Edit ${recipe.name}`" @click.stop>
+                                        <Button aria-label="Edit" variant="ghost" size="icon" class="h-8 w-8">
                                             <Pencil class="h-3.5 w-3.5" />
                                         </Button>
                                     </Link>
-                                    <Button v-if="can.delete" variant="outline" size="icon" class="h-8 w-8 text-destructive" @click.prevent="openDelete(recipe)">
+                                    <Button aria-label="Delete" v-if="can.delete" variant="ghost" size="icon" class="h-8 w-8 text-muted-foreground hover:text-muted-foreground hover:text-destructive" @click.prevent="openDelete(recipe)">
                                         <Trash2 class="h-3.5 w-3.5" />
                                     </Button>
                                 </div>

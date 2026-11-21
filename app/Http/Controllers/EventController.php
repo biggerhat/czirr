@@ -21,9 +21,18 @@ class EventController extends Controller
 
     public function index(Request $request): JsonResponse
     {
-        $timezone = $request->input('timezone', 'UTC');
+        $request->validate([
+            'start' => ['required', 'date'],
+            'end' => ['required', 'date', 'after_or_equal:start'],
+            'timezone' => ['nullable', 'timezone:all'],
+        ]);
+
+        $timezone = $request->input('timezone') ?: 'UTC';
         $start = Carbon::parse($request->input('start'), $timezone)->utc();
         $end = Carbon::parse($request->input('end'), $timezone)->utc();
+
+        // Cap the window: recurring events are expanded across the whole range.
+        abort_if($start->diffInDays($end) > 800, 422, 'Date range too large.');
 
         $userId = $request->user()->familyOwnerId();
 

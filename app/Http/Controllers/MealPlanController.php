@@ -7,6 +7,7 @@ use App\Enums\ListVisibility;
 use App\Enums\MealType;
 use App\Models\FamilyList;
 use App\Models\MealPlanEntry;
+use App\Models\PantryItem;
 use App\Models\Recipe;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
@@ -21,7 +22,7 @@ class MealPlanController extends Controller
     {
         $startDate = $request->query('start')
             ? Carbon::parse($request->query('start'))->startOfDay()
-            : Carbon::now()->startOfWeek(Carbon::MONDAY);
+            : $request->user()->localNow()->startOfWeek(Carbon::MONDAY);
 
         $endDate = $startDate->copy()->addDays(13)->endOfDay();
 
@@ -29,7 +30,7 @@ class MealPlanController extends Controller
             ->whereBetween('date', [$startDate->toDateString(), $endDate->toDateString()])
             ->with('recipe:id,name,description,prep_time,cook_time,servings,difficulty')
             ->orderBy('date')
-            ->orderByRaw("FIELD(meal_type, 'breakfast', 'lunch', 'dinner', 'snack')")
+            ->orderByMealType()
             ->get();
 
         $recipes = $this->getVisibleRecipes($request)
@@ -62,10 +63,12 @@ class MealPlanController extends Controller
 
     public function store(Request $request): JsonResponse
     {
+        $ownerId = $request->user()->familyOwnerId();
+
         $validated = $request->validate([
             'date' => ['required', 'date'],
             'meal_type' => ['required', 'string', Rule::in(array_column(MealType::cases(), 'value'))],
-            'recipe_id' => ['nullable', 'integer', 'exists:recipes,id'],
+            'recipe_id' => ['nullable', 'integer', Rule::exists('recipes', 'id')->where('user_id', $ownerId)],
             'name' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
         ]);
@@ -83,10 +86,12 @@ class MealPlanController extends Controller
             abort(403);
         }
 
+        $ownerId = $request->user()->familyOwnerId();
+
         $validated = $request->validate([
             'date' => ['required', 'date'],
             'meal_type' => ['required', 'string', Rule::in(array_column(MealType::cases(), 'value'))],
-            'recipe_id' => ['nullable', 'integer', 'exists:recipes,id'],
+            'recipe_id' => ['nullable', 'integer', Rule::exists('recipes', 'id')->where('user_id', $ownerId)],
             'name' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
         ]);
@@ -106,6 +111,86 @@ class MealPlanController extends Controller
         $mealPlanEntry->delete();
 
         return response()->json(null, 204);
+    }
+
+    /**
+     * Copy the 7 days before $start into the 7 days starting at $start.
+     * Entries already present (same date, meal type and name) are skipped.
+     */
+    public function copyPreviousWeek(Request $request): JsonResponse
+    {
+        $validated = $request->validate(['start' => ['required', 'date']]);
+
+        $target = Carbon::parse($validated['start'])->startOfDay();
+        $source = $target->copy()->subDays(7);
+        $owner = $request->user()->familyOwner();
+
+        $existing = $this->getVisibleEntries($request)
+            ->whereBetween('date', [$target->toDateString(), $target->copy()->addDays(6)->toDateString()])
+            ->get()
+            ->map(fn ($e) => $e->date->toDateString().'|'.$e->meal_type->value.'|'.mb_strtolower($e->name))
+            ->flip();
+
+        $copied = 0;
+        $this->getVisibleEntries($request)
+            ->whereBetween('date', [$source->toDateString(), $source->copy()->addDays(6)->toDateString()])
+            ->get()
+            ->each(function (MealPlanEntry $entry) use ($owner, $existing, &$copied) {
+                $date = $entry->date->copy()->addDays(7);
+                $key = $date->toDateString().'|'.$entry->meal_type->value.'|'.mb_strtolower($entry->name);
+                if ($existing->has($key)) {
+                    return;
+                }
+                $owner->mealPlanEntries()->create([
+                    'date' => $date->toDateString(),
+                    'meal_type' => $entry->meal_type,
+                    'recipe_id' => $entry->recipe_id,
+                    'name' => $entry->name,
+                    'description' => $entry->description,
+                ]);
+                $copied++;
+            });
+
+        return response()->json(['copied' => $copied]);
+    }
+
+    /**
+     * Dinner ideas: recipes not planned in the last 14 days, best-rated first,
+     * then whichever the family hasn't made for longest.
+     */
+    public function suggestions(Request $request): JsonResponse
+    {
+        $ownerId = $request->user()->familyOwnerId();
+        $cutoff = now()->subDays(14)->toDateString();
+
+        $lastPlanned = MealPlanEntry::where('user_id', $ownerId)
+            ->whereNotNull('recipe_id')
+            ->selectRaw('recipe_id, MAX(date) as last_date')
+            ->groupBy('recipe_id')
+            ->pluck('last_date', 'recipe_id');
+
+        $ratings = \App\Models\RecipeRating::selectRaw('recipe_id, AVG(rating) as avg')
+            ->groupBy('recipe_id')
+            ->pluck('avg', 'recipe_id');
+
+        $ideas = $this->getVisibleRecipes($request)
+            ->get(['id', 'name', 'prep_time', 'cook_time'])
+            ->reject(fn ($r) => ($lastPlanned[$r->id] ?? '0000') >= $cutoff)
+            ->sortBy([
+                fn ($a, $b) => ($ratings[$b->id] ?? 0) <=> ($ratings[$a->id] ?? 0),
+                fn ($a, $b) => ($lastPlanned[$a->id] ?? '0000') <=> ($lastPlanned[$b->id] ?? '0000'),
+            ])
+            ->take(8)
+            ->map(fn ($r) => [
+                'id' => $r->id,
+                'name' => $r->name,
+                'total_time' => ($r->prep_time ?? 0) + ($r->cook_time ?? 0),
+                'rating' => isset($ratings[$r->id]) ? round($ratings[$r->id], 1) : null,
+                'last_planned' => $lastPlanned[$r->id] ?? null,
+            ])
+            ->values();
+
+        return response()->json($ideas);
     }
 
     public function generateGroceryList(Request $request): JsonResponse
@@ -141,6 +226,29 @@ class MealPlanController extends Controller
             return response()->json([
                 'message' => 'No recipe ingredients found in this period.',
             ], 422);
+        }
+
+        // Skip staples the family always has at home (exact match after normalising).
+        $staples = PantryItem::where('user_id', $request->user()->familyOwnerId())->pluck('name_key')->flip();
+        $skipped = [];
+        $allIngredients = array_values(array_filter($allIngredients, function ($ingredient) use ($staples, &$skipped) {
+            if ($staples->has(PantryItem::normalize($ingredient['name']))) {
+                $skipped[mb_strtolower(trim($ingredient['name']))] = trim($ingredient['name']);
+
+                return false;
+            }
+
+            return true;
+        }));
+
+        if (empty($allIngredients)) {
+            return response()->json([
+                'message' => 'Everything you need is already in your pantry — nothing to buy.',
+            ], 422);
+        }
+
+        if ($skipped) {
+            session()->flash('status', 'Left off '.count($skipped).' pantry staple'.(count($skipped) === 1 ? '' : 's').': '.implode(', ', array_values($skipped)).'.');
         }
 
         $merged = $this->mergeIngredients($allIngredients);

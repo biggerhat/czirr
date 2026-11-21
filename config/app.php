@@ -16,6 +16,12 @@ return [
     'name' => env('APP_NAME', 'Laravel'),
 
     /*
+    | When false, new accounts can only be created by following a valid family
+    | invite link (the very first account is always allowed).
+    */
+    'registration_open' => (bool) env('REGISTRATION_OPEN', true),
+
+    /*
     |--------------------------------------------------------------------------
     | Application Environment
     |--------------------------------------------------------------------------

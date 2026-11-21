@@ -68,7 +68,7 @@ class CookbookController extends Controller
             'description' => ['nullable', 'string'],
             'visibility' => ['required', 'string', Rule::in(array_column(ListVisibility::cases(), 'value'))],
             'member_ids' => ['nullable', 'array'],
-            'member_ids.*' => ['integer', 'exists:family_members,id'],
+            'member_ids.*' => ['integer', Rule::exists('family_members', 'id')->where('user_id', $request->user()->familyOwnerId())],
         ]);
 
         $owner = $request->user()->familyOwner();
@@ -98,7 +98,7 @@ class CookbookController extends Controller
             'description' => ['nullable', 'string'],
             'visibility' => ['required', 'string', Rule::in(array_column(ListVisibility::cases(), 'value'))],
             'member_ids' => ['nullable', 'array'],
-            'member_ids.*' => ['integer', 'exists:family_members,id'],
+            'member_ids.*' => ['integer', Rule::exists('family_members', 'id')->where('user_id', $request->user()->familyOwnerId())],
         ]);
 
         $cookbook->update([
@@ -131,8 +131,10 @@ class CookbookController extends Controller
     {
         $this->authorizeCookbookAccess($request, $cookbook);
 
+        $ownerId = $request->user()->familyOwnerId();
+
         $validated = $request->validate([
-            'recipe_id' => ['required', 'integer', 'exists:recipes,id'],
+            'recipe_id' => ['required', 'integer', Rule::exists('recipes', 'id')->where('user_id', $ownerId)],
         ]);
 
         $maxPosition = $cookbook->recipes()->max('cookbook_recipe.position') ?? -1;
@@ -155,73 +157,12 @@ class CookbookController extends Controller
 
     private function getVisibleCookbooks(Request $request)
     {
-        $user = $request->user();
-
-        $linkedMember = $user->linkedFamilyMember();
-
-        if (! $linkedMember) {
-            return $user->cookbooks();
-        }
-
-        $familyOwnerId = $linkedMember->user_id;
-        $memberRole = $linkedMember->role?->value;
-        $memberId = $linkedMember->id;
-
-        return Cookbook::where(function ($query) use ($user, $familyOwnerId, $memberRole, $memberId) {
-            $query->where('user_id', $user->id)
-                ->orWhere(function ($q) use ($familyOwnerId, $memberRole, $memberId) {
-                    $q->where('user_id', $familyOwnerId)
-                        ->where(function ($vis) use ($memberRole, $memberId) {
-                            $vis->where('visibility', ListVisibility::Everyone->value)
-                                ->when($memberRole === 'parent', fn ($q) => $q->orWhere('visibility', ListVisibility::Parents->value))
-                                ->when($memberRole === 'child', fn ($q) => $q->orWhere('visibility', ListVisibility::Children->value))
-                                ->orWhere(function ($specific) use ($memberId) {
-                                    $specific->where('visibility', ListVisibility::Specific->value)
-                                        ->whereHas('members', fn ($q) => $q->where('family_member_id', $memberId));
-                                });
-                        });
-                });
-        });
+        return Cookbook::visibleTo($request->user());
     }
 
     private function authorizeCookbookAccess(Request $request, Cookbook $cookbook): void
     {
-        $user = $request->user();
-
-        if ($cookbook->user_id === $user->id) {
-            return;
-        }
-
-        $linkedMember = FamilyMember::where('linked_user_id', $user->id)
-            ->where('user_id', $cookbook->user_id)
-            ->first();
-
-        if (! $linkedMember) {
-            abort(403);
-        }
-
-        $visibility = $cookbook->visibility;
-        $memberRole = $linkedMember->role?->value;
-
-        if ($visibility === ListVisibility::Everyone) {
-            return;
-        }
-
-        if ($visibility === ListVisibility::Parents && $memberRole === 'parent') {
-            return;
-        }
-
-        if ($visibility === ListVisibility::Children && $memberRole === 'child') {
-            return;
-        }
-
-        if ($visibility === ListVisibility::Specific) {
-            if ($cookbook->members()->where('family_member_id', $linkedMember->id)->exists()) {
-                return;
-            }
-        }
-
-        abort(403);
+        abort_unless($cookbook->isVisibleTo($request->user()), 403);
     }
 
     private function getFamilyMembers(Request $request)

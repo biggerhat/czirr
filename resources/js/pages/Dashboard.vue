@@ -11,7 +11,7 @@ import {
     Trophy,
     UtensilsCrossed,
 } from 'lucide-vue-next';
-import { ref, onMounted } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Spinner } from '@/components/ui/spinner';
@@ -33,6 +33,9 @@ type DashboardMeal = {
 };
 
 const props = defineProps<{
+    pendingApprovals: number;
+    mySavings: number | null;
+    latestPost: { body: string; author: string | null; pinned: boolean } | null;
     todaysBills: UpcomingBill[];
     todaysChores: ChoreAssignment[];
     todaysMeals: DashboardMeal[];
@@ -46,6 +49,17 @@ const props = defineProps<{
         viewLists: boolean;
     };
 }>();
+
+const greeting = computed(() => {
+    const h = new Date().getHours();
+    const part = h < 12 ? 'morning' : h < 18 ? 'afternoon' : 'evening';
+    return `Good ${part}`;
+});
+const todayLabel = new Date().toLocaleDateString(undefined, {
+    weekday: 'long',
+    month: 'long',
+    day: 'numeric',
+});
 
 const medalColors = ['text-yellow-500', 'text-gray-400', 'text-amber-700'];
 
@@ -138,14 +152,39 @@ function pinnedListProgress(list: FamilyList): string {
 
     <AppLayout :breadcrumbs="breadcrumbs">
         <div class="flex h-full flex-1 flex-col gap-4 p-4">
+            <div>
+                <h2 class="text-xl font-semibold tracking-tight">{{ greeting }}</h2>
+                <p class="text-sm text-muted-foreground">{{ todayLabel }}</p>
+            </div>
+
+            <div v-if="pendingApprovals > 0 || latestPost || mySavings !== null" class="grid gap-2 sm:grid-cols-2">
+                <Link v-if="mySavings !== null" href="/savings" class="rounded-lg border p-3 text-sm hover:bg-accent">
+                    <span class="block text-xs text-muted-foreground">Your savings</span>
+                    <span class="text-lg font-semibold tabular-nums">{{ formatAmount(mySavings) }}</span>
+                </Link>
+                <Link
+                    v-if="pendingApprovals > 0"
+                    href="/chores"
+                    class="rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-sm hover:bg-amber-500/15"
+                >
+                    <span class="font-medium">{{ pendingApprovals }} chore{{ pendingApprovals === 1 ? '' : 's' }} waiting for approval</span>
+                    <span class="block text-xs text-muted-foreground">Tap to review</span>
+                </Link>
+                <Link v-if="latestPost" href="/board" class="rounded-lg border p-3 text-sm hover:bg-accent">
+                    <span class="block text-xs text-muted-foreground">
+                        {{ latestPost.pinned ? 'Pinned on the board' : 'Latest on the board' }}<template v-if="latestPost.author"> · {{ latestPost.author }}</template>
+                    </span>
+                    <span class="line-clamp-2">{{ latestPost.body }}</span>
+                </Link>
+            </div>
+
             <div class="grid gap-4 md:grid-cols-2">
                 <!-- Today's Bills -->
                 <div v-if="can.viewBills" class="rounded-lg border p-4 space-y-3">
                     <h3 class="text-sm font-semibold">Today's Bills</h3>
-                    <div v-if="todaysBills.length === 0" class="rounded-lg border border-dashed p-8 text-center">
-                        <CheckCircle2 class="mx-auto mb-2 h-8 w-8 text-muted-foreground/30" />
+                    <div v-if="todaysBills.length === 0" class="rounded-lg border border-dashed p-3 text-center">
+                        <CheckCircle2 class="mx-auto mb-1 h-5 w-5 text-muted-foreground/60" />
                         <p class="text-sm text-muted-foreground">No bills due today.</p>
-                        <p class="mt-1 text-xs text-muted-foreground/70">Bills scheduled for today will appear here.</p>
                     </div>
                     <ul v-else class="space-y-2">
                         <li
@@ -175,10 +214,9 @@ function pinnedListProgress(list: FamilyList): string {
                     <div v-if="eventsLoading" class="flex items-center justify-center py-6">
                         <Spinner class="size-5" />
                     </div>
-                    <div v-else-if="events.length === 0" class="rounded-lg border border-dashed p-8 text-center">
-                        <Calendar class="mx-auto mb-2 h-8 w-8 text-muted-foreground/30" />
+                    <div v-else-if="events.length === 0" class="rounded-lg border border-dashed p-3 text-center">
+                        <Calendar class="mx-auto mb-1 h-5 w-5 text-muted-foreground/60" />
                         <p class="text-sm text-muted-foreground">No events today.</p>
-                        <p class="mt-1 text-xs text-muted-foreground/70">Scheduled events will show up here.</p>
                     </div>
                     <ul v-else class="space-y-2">
                         <li
@@ -203,10 +241,9 @@ function pinnedListProgress(list: FamilyList): string {
                 <!-- Today's Meals -->
                 <div v-if="can.viewMeals" class="rounded-lg border p-4 space-y-3">
                     <h3 class="text-sm font-semibold">Today's Meals</h3>
-                    <div v-if="todaysMeals.length === 0" class="rounded-lg border border-dashed p-8 text-center">
-                        <UtensilsCrossed class="mx-auto mb-2 h-8 w-8 text-muted-foreground/30" />
+                    <div v-if="todaysMeals.length === 0" class="rounded-lg border border-dashed p-3 text-center">
+                        <UtensilsCrossed class="mx-auto mb-1 h-5 w-5 text-muted-foreground/60" />
                         <p class="text-sm text-muted-foreground">No meals planned for today.</p>
-                        <p class="mt-1 text-xs text-muted-foreground/70">Add meals from the meal plan page.</p>
                     </div>
                     <ul v-else class="space-y-2">
                         <li
@@ -232,10 +269,9 @@ function pinnedListProgress(list: FamilyList): string {
                 <!-- Today's Chores -->
                 <div v-if="can.viewChores" class="rounded-lg border p-4 space-y-3">
                     <h3 class="text-sm font-semibold">Today's Chores</h3>
-                    <div v-if="todaysChores.length === 0" class="rounded-lg border border-dashed p-8 text-center">
-                        <ClipboardList class="mx-auto mb-2 h-8 w-8 text-muted-foreground/30" />
+                    <div v-if="todaysChores.length === 0" class="rounded-lg border border-dashed p-3 text-center">
+                        <ClipboardList class="mx-auto mb-1 h-5 w-5 text-muted-foreground/60" />
                         <p class="text-sm text-muted-foreground">No chores scheduled for today.</p>
-                        <p class="mt-1 text-xs text-muted-foreground/70">Assigned chores will appear here.</p>
                     </div>
                     <ul v-else class="space-y-2">
                         <li
@@ -274,13 +310,15 @@ function pinnedListProgress(list: FamilyList): string {
                             :key="score.family_member_id"
                             class="flex items-center gap-2 rounded-lg border px-2.5 py-2 transition-colors sm:gap-3 sm:px-3"
                             :class="[
+                                score.weekly_total <= 0 ? 'border-transparent' :
                                 i === 0 ? 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800' :
                                 i === 1 ? 'bg-gray-50 dark:bg-gray-800/30 border-gray-200 dark:border-gray-700' :
                                 i === 2 ? 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800' :
                                 'border-transparent'
                             ]"
                         >
-                            <Medal class="h-4 w-4 shrink-0" :class="medalColors[i]" />
+                            <Medal v-if="score.weekly_total > 0" class="h-4 w-4 shrink-0" :class="medalColors[i]" />
+                            <span v-else class="h-4 w-4 shrink-0" />
                             <span
                                 class="h-2.5 w-2.5 shrink-0 rounded-full"
                                 :class="EVENT_COLORS[score.color as keyof typeof EVENT_COLORS]?.dot ?? 'bg-gray-400'"
@@ -313,10 +351,9 @@ function pinnedListProgress(list: FamilyList): string {
                         </h3>
                         <span class="text-xs text-muted-foreground">{{ pinnedListProgress(list) }} done</span>
                     </div>
-                    <div v-if="!list.items || list.items.length === 0" class="rounded-lg border border-dashed p-8 text-center">
-                        <ListChecks class="mx-auto mb-2 h-8 w-8 text-muted-foreground/30" />
+                    <div v-if="!list.items || list.items.length === 0" class="rounded-lg border border-dashed p-3 text-center">
+                        <ListChecks class="mx-auto mb-1 h-5 w-5 text-muted-foreground/60" />
                         <p class="text-sm text-muted-foreground">No items in this list.</p>
-                        <p class="mt-1 text-xs text-muted-foreground/70">Add items from the list page.</p>
                     </div>
                     <ul v-else class="space-y-2">
                         <li
@@ -326,6 +363,7 @@ function pinnedListProgress(list: FamilyList): string {
                             @click="toggleListItem(item)"
                         >
                             <Checkbox
+                                :aria-label="`Mark ${item.name} ${item.is_completed ? 'not done' : 'done'}`"
                                 :model-value="item.is_completed"
                                 @click.stop
                                 @update:model-value="toggleListItem(item)"

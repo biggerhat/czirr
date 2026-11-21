@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { Head } from '@inertiajs/vue3';
-import { Pencil, Trash2, Plus, Check, X, Link as LinkIcon, Unlink as UnlinkIcon, Lock, Shield, Users } from 'lucide-vue-next';
+import { Pencil, Trash2, Plus, Check, X, Link as LinkIcon, Unlink as UnlinkIcon, Lock, Shield, Users, UserPlus } from 'lucide-vue-next';
 import { ref, computed } from 'vue';
+import InviteDialog from '@/components/family/InviteDialog.vue';
 import Heading from '@/components/Heading.vue';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -68,6 +69,7 @@ const roleNames = computed(() => roles.value.map(r => r.name));
 // Add form state
 const newName = ref('');
 const newNickname = ref('');
+const showAdd = ref(props.familyMembers.length === 0);
 const newVisibility = ref<'parent' | 'child'>('child');
 const newSpatieRole = ref<string>('child');
 const newColor = ref<EventColor>('blue');
@@ -157,6 +159,7 @@ async function addMember() {
             }
             updateAvailableUsers(null, member.linked_user_id);
             newName.value = '';
+            showAdd.value = false;
             newNickname.value = '';
             newVisibility.value = 'child';
             newSpatieRole.value = 'child';
@@ -225,6 +228,14 @@ async function saveEdit(member: FamilyMember) {
     } catch (e) {
         saveError.value = `Request failed: ${e instanceof Error ? e.message : 'Unknown error'}`;
     }
+}
+
+const showInvite = ref(false);
+const inviteMember = ref<{ id: number; name: string } | null>(null);
+
+function openInvite(member: FamilyMember | null) {
+    inviteMember.value = member ? { id: member.id, name: member.nickname || member.name } : null;
+    showInvite.value = true;
 }
 
 const showDeleteDialog = ref(false);
@@ -452,8 +463,17 @@ function formatModuleName(module: string): string {
                     description="Manage family members that can be assigned to calendar events. Link them to user accounts so they can log in."
                 />
 
-                <!-- Add form -->
-                <div v-if="can.create" class="rounded-md border p-4 space-y-3">
+                <!-- Actions -->
+                <div v-if="can.create" class="flex flex-wrap gap-2">
+                    <Button v-if="!showAdd" variant="outline" size="sm" @click="showAdd = true">
+                        <Plus class="mr-2 h-4 w-4" /> Add family member
+                    </Button>
+                    <Button variant="outline" size="sm" @click="openInvite(null)">
+                        <UserPlus class="mr-2 h-4 w-4" /> Invite someone
+                    </Button>
+                </div>
+
+                <div v-if="can.create && showAdd" class="rounded-md border p-4 space-y-3">
                     <div class="text-sm font-medium">Add family member</div>
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <div class="space-y-1.5">
@@ -473,10 +493,10 @@ function formatModuleName(module: string): string {
                             />
                         </div>
                         <div class="space-y-1.5">
-                            <label class="text-sm text-muted-foreground">Visibility</label>
+                            <label class="text-sm text-muted-foreground">Role</label>
                             <Select v-model="newVisibility">
-                                <SelectTrigger>
-                                    <SelectValue placeholder="Visibility" />
+                                <SelectTrigger aria-label="Role">
+                                    <SelectValue placeholder="Role" />
                                 </SelectTrigger>
                                 <SelectContent>
                                     <SelectItem v-for="v in visibilityOptions" :key="v" :value="v">
@@ -488,7 +508,7 @@ function formatModuleName(module: string): string {
                         <div v-if="availableUsers.length > 0" class="space-y-1.5">
                             <label class="text-sm text-muted-foreground">Link account</label>
                             <Select v-model="newLinkedUserId">
-                                <SelectTrigger>
+                                <SelectTrigger aria-label="Link account">
                                     <SelectValue placeholder="No account" />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -502,7 +522,7 @@ function formatModuleName(module: string): string {
                         <div v-if="newLinkedUserId !== 'none'" class="space-y-1.5">
                             <label class="text-sm text-muted-foreground">Role</label>
                             <Select v-model="newSpatieRole">
-                                <SelectTrigger>
+                                <SelectTrigger aria-label="Account role">
                                     <SelectValue placeholder="Role" />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -519,8 +539,10 @@ function formatModuleName(module: string): string {
                                 v-for="c in colorOptions"
                                 :key="c"
                                 type="button"
+                                :aria-label="`${c} color`"
+                                :aria-pressed="newColor === c"
                                 :class="[
-                                    'w-6 h-6 rounded-full transition-all',
+                                    'w-7 h-7 rounded-full transition-all',
                                     EVENT_COLORS[c].dot,
                                     newColor === c ? 'ring-2 ring-offset-2 ring-offset-background ring-foreground scale-110' : 'opacity-50 hover:opacity-100',
                                 ]"
@@ -553,10 +575,10 @@ function formatModuleName(module: string): string {
                                         @keydown.enter="saveEdit(member)"
                                         @keydown.escape="cancelEdit"
                                     />
-                                    <Button variant="ghost" size="icon" class="h-8 w-8" @click="saveEdit(member)">
+                                    <Button aria-label="Save" variant="ghost" size="icon" class="h-8 w-8" @click="saveEdit(member)">
                                         <Check class="h-4 w-4" />
                                     </Button>
-                                    <Button variant="ghost" size="icon" class="h-8 w-8" @click="cancelEdit">
+                                    <Button aria-label="Cancel" variant="ghost" size="icon" class="h-8 w-8" @click="cancelEdit">
                                         <X class="h-4 w-4" />
                                     </Button>
                                 </div>
@@ -571,10 +593,10 @@ function formatModuleName(module: string): string {
                                     />
                                 </div>
                                 <div class="pl-6 space-y-1.5">
-                                    <label class="text-sm text-muted-foreground">Visibility</label>
+                                    <label class="text-sm text-muted-foreground">Role</label>
                                     <Select v-model="editVisibility">
-                                        <SelectTrigger class="h-8">
-                                            <SelectValue placeholder="Visibility" />
+                                        <SelectTrigger class="h-8" aria-label="Role">
+                                            <SelectValue placeholder="Role" />
                                         </SelectTrigger>
                                         <SelectContent>
                                             <SelectItem v-for="v in visibilityOptions" :key="v" :value="v">
@@ -589,8 +611,10 @@ function formatModuleName(module: string): string {
                                             v-for="c in colorOptions"
                                             :key="c"
                                             type="button"
+                                            :aria-label="`${c} color`"
+                                            :aria-pressed="editColor === c"
                                             :class="[
-                                                'w-5 h-5 rounded-full transition-all',
+                                                'w-6 h-6 rounded-full transition-all',
                                                 EVENT_COLORS[c].dot,
                                                 editColor === c ? 'ring-2 ring-offset-1 ring-offset-background ring-foreground scale-110' : 'opacity-40 hover:opacity-100',
                                             ]"
@@ -601,7 +625,7 @@ function formatModuleName(module: string): string {
                                 <div class="pl-6">
                                     <label class="text-sm text-muted-foreground">Linked account</label>
                                     <Select v-model="editLinkedUserId" class="mt-1">
-                                        <SelectTrigger class="h-8">
+                                        <SelectTrigger class="h-8" aria-label="Linked account">
                                             <SelectValue placeholder="No account" />
                                         </SelectTrigger>
                                         <SelectContent>
@@ -633,7 +657,7 @@ function formatModuleName(module: string): string {
                                             :model-value="member.spatie_role ?? ''"
                                             @update:model-value="updateMemberSpatieRole(member, String($event))"
                                         >
-                                            <SelectTrigger class="h-7 w-[110px] text-xs">
+                                            <SelectTrigger class="h-7 w-[110px] text-xs" :aria-label="`Account role for ${member.name}`">
                                                 <SelectValue placeholder="Role" />
                                             </SelectTrigger>
                                             <SelectContent>
@@ -642,10 +666,13 @@ function formatModuleName(module: string): string {
                                                 </SelectItem>
                                             </SelectContent>
                                         </Select>
-                                        <Button v-if="can.edit" variant="ghost" size="icon" class="h-8 w-8" @click="startEdit(member)">
+                                        <Button aria-label="Invite to log in" v-if="can.create && !member.linked_user_id" variant="ghost" size="icon" class="h-8 w-8" title="Invite to log in" @click="openInvite(member)">
+                                            <UserPlus class="h-3.5 w-3.5" />
+                                        </Button>
+                                        <Button aria-label="Edit" v-if="can.edit" variant="ghost" size="icon" class="h-8 w-8" @click="startEdit(member)">
                                             <Pencil class="h-3.5 w-3.5" />
                                         </Button>
-                                        <Button v-if="can.delete" variant="ghost" size="icon" class="h-8 w-8 text-destructive" @click="openDeleteMember(member)">
+                                        <Button aria-label="Delete member" v-if="can.delete" variant="ghost" size="icon" class="h-8 w-8 text-muted-foreground hover:text-destructive" @click="openDeleteMember(member)">
                                             <Trash2 class="h-3.5 w-3.5" />
                                         </Button>
                                     </div>
@@ -656,15 +683,12 @@ function formatModuleName(module: string): string {
                                         <Shield class="h-3 w-3" />
                                         {{ member.spatie_role }}
                                     </span>
-                                    <span :class="[
-                                        'inline-flex items-center px-1.5 py-0.5 text-xs rounded',
-                                        'bg-muted/50 text-muted-foreground/70',
-                                    ]">{{ member.role }}</span>
+                                    <span v-if="!member.spatie_role" class="inline-flex items-center px-1.5 py-0.5 text-xs rounded bg-muted/50 text-muted-foreground">{{ member.role }}</span>
                                     <span v-if="member.linked_user" class="inline-flex items-center gap-1 text-xs text-muted-foreground">
                                         <LinkIcon class="h-3 w-3" />
                                         {{ member.linked_user.email }}
                                     </span>
-                                    <span v-else class="inline-flex items-center gap-1 text-xs text-muted-foreground/50">
+                                    <span v-else class="inline-flex items-center gap-1 text-xs text-muted-foreground">
                                         <UnlinkIcon class="h-3 w-3" />
                                         No account
                                     </span>
@@ -676,7 +700,7 @@ function formatModuleName(module: string): string {
                 <div v-else class="rounded-lg border border-dashed p-8 text-center">
                     <Users class="mx-auto mb-2 h-8 w-8 text-muted-foreground/30" />
                     <p class="text-sm text-muted-foreground">No family members yet.</p>
-                    <p class="mt-1 text-xs text-muted-foreground/70">
+                    <p class="mt-1 text-xs text-muted-foreground">
                         Add family members to assign them to events, chores, and more.
                     </p>
                 </div>
@@ -724,14 +748,14 @@ function formatModuleName(module: string): string {
                                     </span>
                                 </div>
                                 <div class="flex items-center gap-1">
-                                    <Button variant="ghost" size="icon" class="h-8 w-8" @click="openEditRole(role)">
+                                    <Button aria-label="Edit role" variant="ghost" size="icon" class="h-8 w-8" @click="openEditRole(role)">
                                         <Pencil class="h-3.5 w-3.5" />
                                     </Button>
-                                    <Button
+                                    <Button aria-label="Delete role"
                                         v-if="!role.is_default"
                                         variant="ghost"
                                         size="icon"
-                                        class="h-8 w-8 text-destructive"
+                                        class="h-8 w-8 text-muted-foreground hover:text-destructive"
                                         @click="openDeleteRole(role)"
                                     >
                                         <Trash2 class="h-3.5 w-3.5" />
@@ -783,6 +807,7 @@ function formatModuleName(module: string): string {
                                     >
                                         <div class="flex items-center gap-2">
                                             <Checkbox
+                                                :aria-label="`All ${formatModuleName(module as string)} permissions`"
                                                 :model-value="hasAllPermissions(perms)"
                                                 @update:model-value="toggleModulePermissions(perms)"
                                             />
@@ -837,5 +862,6 @@ function formatModuleName(module: string): string {
                 </template>
             </div>
         </div>
+        <InviteDialog v-model:open="showInvite" :member="inviteMember" />
     </AppLayout>
 </template>

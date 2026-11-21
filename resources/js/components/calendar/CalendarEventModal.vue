@@ -263,7 +263,7 @@ async function createEventType() {
             showTypeCreate.value = false;
 
             // Refresh the page-level eventTypes prop so the toolbar filter updates
-            router.reload({ only: ['eventTypes'], preserveState: true, preserveScroll: true });
+            router.reload({ only: ['eventTypes'] });
         }
     } finally {
         isCreatingType.value = false;
@@ -478,7 +478,7 @@ async function save() {
                                         </SelectItem>
                                     </SelectContent>
                                 </Select>
-                                <Button type="button" variant="outline" size="icon" class="shrink-0" @click="showTypeCreate = !showTypeCreate">
+                                <Button aria-label="Add" type="button" variant="outline" size="icon" class="shrink-0" @click="showTypeCreate = !showTypeCreate">
                                     <Plus class="h-4 w-4" />
                                 </Button>
                             </div>

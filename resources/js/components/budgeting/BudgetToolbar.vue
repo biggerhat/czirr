@@ -15,10 +15,10 @@ defineEmits<{
 
 <template>
     <div class="flex items-center gap-2 pb-4">
-        <Button variant="outline" size="icon" @click="$emit('prev')">
+        <Button aria-label="Previous" variant="outline" size="icon" @click="$emit('prev')">
             <ChevronLeft class="h-4 w-4" />
         </Button>
-        <Button variant="outline" size="icon" @click="$emit('next')">
+        <Button aria-label="Next" variant="outline" size="icon" @click="$emit('next')">
             <ChevronRight class="h-4 w-4" />
         </Button>
         <Button variant="outline" size="sm" @click="$emit('today')">

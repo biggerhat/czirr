@@ -4,15 +4,19 @@ namespace App\Models;
 
 use App\Enums\ListType;
 use App\Enums\ListVisibility;
+use App\Models\Concerns\HasFamilyVisibility;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
+/**
+ * @property ListVisibility $visibility
+ */
 class FamilyList extends Model
 {
-    use HasFactory;
+    use HasFactory, HasFamilyVisibility;
 
     protected $fillable = [
         'name',

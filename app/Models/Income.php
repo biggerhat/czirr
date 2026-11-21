@@ -12,6 +12,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 class Income extends Model
 {
+    use \App\Models\Concerns\HasRecurrence;
     use HasFactory;
 
     protected $fillable = [
@@ -45,64 +46,7 @@ class Income extends Model
 
     public function occurrencesInRange(Carbon $start, Carbon $end): int
     {
-        $incomeStart = $this->start_date;
-
-        if ($this->frequency === 'once') {
-            return $incomeStart->between($start, $end) ? 1 : 0;
-        }
-
-        // Weekly / biweekly
-        if (in_array($this->frequency, ['weekly', 'biweekly'])) {
-            $intervalDays = $this->frequency === 'weekly' ? 7 : 14;
-
-            if ($incomeStart->gt($end)) {
-                return 0;
-            }
-
-            // Find first occurrence on or after range start
-            $first = $incomeStart->copy();
-            if ($first->lt($start)) {
-                $daysDiff = $incomeStart->diffInDays($start);
-                $periods = (int) ceil($daysDiff / $intervalDays);
-                $first = $incomeStart->copy()->addDays($periods * $intervalDays);
-            }
-
-            if ($first->gt($end)) {
-                return 0;
-            }
-
-            return (int) floor($first->diffInDays($end) / $intervalDays) + 1;
-        }
-
-        // Monthly / quarterly / yearly
-        $interval = match ($this->frequency) {
-            'quarterly' => 3,
-            'yearly' => 12,
-            default => 1,
-        };
-
-        $payDay = $incomeStart->day;
-        $count = 0;
-        $current = $start->copy()->startOfMonth();
-
-        while ($current->lte($end)) {
-            if ($current->gte($incomeStart->copy()->startOfMonth())) {
-                $monthsDiff = $incomeStart->copy()->startOfMonth()->diffInMonths($current);
-
-                if ($monthsDiff % $interval === 0) {
-                    $day = min($payDay, $current->copy()->endOfMonth()->day);
-                    $occDate = $current->copy()->day($day);
-
-                    if ($occDate->between($start, $end)) {
-                        $count++;
-                    }
-                }
-            }
-
-            $current->addMonth();
-        }
-
-        return $count;
+        return $this->countOccurrences($this->start_date, $this->frequency, $start, $end);
     }
 
     public function hasOccurrenceInRange(Carbon $start, Carbon $end): bool

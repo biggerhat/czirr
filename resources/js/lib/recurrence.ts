@@ -1,7 +1,13 @@
 import type { Weekday } from 'rrule';
 import { RRule } from 'rrule';
 
-export type RecurrenceFrequency = 'none' | 'daily' | 'weekday' | 'weekly' | 'monthly' | 'yearly';
+export type RecurrenceFrequency =
+    | 'none'
+    | 'daily'
+    | 'weekday'
+    | 'weekly'
+    | 'monthly'
+    | 'yearly';
 export type RecurrenceEndType = 'never' | 'until' | 'count';
 
 export type RecurrenceConfig = {
@@ -39,7 +45,13 @@ const FREQ_REVERSE: Record<number, RecurrenceFrequency> = {
 };
 
 const WEEKDAY_OBJECTS: Weekday[] = [
-    RRule.MO, RRule.TU, RRule.WE, RRule.TH, RRule.FR, RRule.SA, RRule.SU,
+    RRule.MO,
+    RRule.TU,
+    RRule.WE,
+    RRule.TH,
+    RRule.FR,
+    RRule.SA,
+    RRule.SU,
 ];
 
 export function buildRRuleString(config: RecurrenceConfig): string | null {
@@ -55,7 +67,7 @@ export function buildRRuleString(config: RecurrenceConfig): string | null {
     if (isWeekday) {
         options.byweekday = [RRule.MO, RRule.TU, RRule.WE, RRule.TH, RRule.FR];
     } else if (config.frequency === 'weekly' && config.byWeekday.length > 0) {
-        options.byweekday = config.byWeekday.map(d => WEEKDAY_OBJECTS[d]);
+        options.byweekday = config.byWeekday.map((d) => WEEKDAY_OBJECTS[d]);
     }
 
     if (config.endType === 'until' && config.untilDate) {
@@ -71,7 +83,9 @@ export function buildRRuleString(config: RecurrenceConfig): string | null {
     return str.startsWith('RRULE:') ? str.slice(6) : str;
 }
 
-export function parseRRuleString(rrule: string | null | undefined): RecurrenceConfig {
+export function parseRRuleString(
+    rrule: string | null | undefined,
+): RecurrenceConfig {
     if (!rrule) return defaultRecurrenceConfig();
 
     try {
@@ -89,11 +103,21 @@ export function parseRRuleString(rrule: string | null | undefined): RecurrenceCo
         };
 
         if (opts.byweekday) {
-            const days = Array.isArray(opts.byweekday) ? opts.byweekday : [opts.byweekday];
-            config.byWeekday = days.map(d => {
+            const days = Array.isArray(opts.byweekday)
+                ? opts.byweekday
+                : [opts.byweekday];
+            config.byWeekday = days.map((d) => {
                 if (typeof d === 'number') return d;
                 if (typeof d === 'string') {
-                    const map: Record<string, number> = { MO: 0, TU: 1, WE: 2, TH: 3, FR: 4, SA: 5, SU: 6 };
+                    const map: Record<string, number> = {
+                        MO: 0,
+                        TU: 1,
+                        WE: 2,
+                        TH: 3,
+                        FR: 4,
+                        SA: 5,
+                        SU: 6,
+                    };
                     return map[d] ?? 0;
                 }
                 return (d as Weekday).weekday;
@@ -105,7 +129,11 @@ export function parseRRuleString(rrule: string | null | undefined): RecurrenceCo
                 config.frequency === 'weekly' &&
                 config.interval === 1 &&
                 sorted.length === 5 &&
-                sorted[0] === 0 && sorted[1] === 1 && sorted[2] === 2 && sorted[3] === 3 && sorted[4] === 4
+                sorted[0] === 0 &&
+                sorted[1] === 1 &&
+                sorted[2] === 2 &&
+                sorted[3] === 3 &&
+                sorted[4] === 4
             ) {
                 config.frequency = 'weekday';
                 config.byWeekday = [];
@@ -155,14 +183,15 @@ export function humanReadableRRule(rrule: string | null | undefined): string {
     }
 
     const unit = FREQ_LABELS[config.frequency] ?? config.frequency;
-    let text = config.interval === 1
-        ? `Every ${unit}`
-        : `Every ${config.interval} ${unit}s`;
+    let text =
+        config.interval === 1
+            ? `Every ${unit}`
+            : `Every ${config.interval} ${unit}s`;
 
     if (config.frequency === 'weekly' && config.byWeekday.length > 0) {
         const dayNames = config.byWeekday
             .sort((a, b) => a - b)
-            .map(d => DAY_NAMES[d]);
+            .map((d) => DAY_NAMES[d]);
         text += ` on ${dayNames.join(', ')}`;
     }
 

@@ -10,6 +10,7 @@ export type FamilyListItem = {
     is_completed: boolean;
     quantity: string | null;
     notes: string | null;
+    category: string | null;
     position: number;
     created_at: string;
     updated_at: string;
@@ -43,3 +44,16 @@ export const LIST_VISIBILITY_LABELS: Record<ListVisibility, string> = {
     children: 'Children Only',
     specific: 'Specific Members',
 };
+
+export const AISLES = [
+    'Produce',
+    'Bakery',
+    'Meat & Seafood',
+    'Dairy & Eggs',
+    'Frozen',
+    'Pantry',
+    'Snacks',
+    'Beverages',
+    'Household',
+    'Other',
+] as const;
